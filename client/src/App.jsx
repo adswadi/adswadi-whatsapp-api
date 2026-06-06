@@ -8,6 +8,12 @@ import useSocketStore from '@/store/socketStore'
 import AppLayout from '@/components/layout/AppLayout'
 
 import LandingPage from '@/pages/LandingPage'
+import AboutPage from '@/pages/AboutPage'
+import PrivacyPage from '@/pages/PrivacyPage'
+import TermsPage from '@/pages/TermsPage'
+import RefundPage from '@/pages/RefundPage'
+import CareersPage from '@/pages/CareersPage'
+import PartnerPage from '@/pages/PartnerPage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
 import OnboardingPage from '@/pages/OnboardingPage'
@@ -95,6 +101,12 @@ function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/refund-policy" element={<RefundPage />} />
+        <Route path="/careers" element={<CareersPage />} />
+        <Route path="/partner-program" element={<PartnerPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/onboarding" element={<OnboardingPage />} />

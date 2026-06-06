@@ -1019,12 +1019,31 @@ export default function LandingPage() {
               { title:'Platform', links:['WhatsApp API','Bulk Broadcast','AI Chatbot','Live Inbox','Analytics','Pricing'] },
               { title:'Industries', links:['E-commerce','Education','Finance','Healthcare','Real Estate','Events'] },
               { title:'Resources', links:['Help Center','Blog','API Docs','Case Studies','YouTube','Template Library'] },
-              { title:'Company', links:['About Us','Careers','Partner Program','Privacy Policy','Terms','Refund Policy'] },
+              { title:'Company', links:[
+                { label:'About Us', href:'/about' },
+                { label:'Careers', href:'/careers' },
+                { label:'Partner Program', href:'/partner-program' },
+                { label:'Privacy Policy', href:'/privacy' },
+                { label:'Terms', href:'/terms' },
+                { label:'Refund Policy', href:'/refund-policy' },
+              ]},
             ].map(({title, links}) => (
               <div key={title}>
                 <h4 className="text-white font-bold text-sm mb-4">{title}</h4>
                 <ul className="space-y-2">
-                  {links.map(l => <li key={l}><a href="#" className="text-xs hover:text-white transition-colors">{l}</a></li>)}
+                  {links.map(l => {
+                    const label = typeof l === 'string' ? l : l.label
+                    const href = typeof l === 'string' ? '#' : l.href
+                    return (
+                      <li key={label}>
+                        {href === '#' ? (
+                          <a href="#" className="text-xs hover:text-white transition-colors">{label}</a>
+                        ) : (
+                          <Link to={href} className="text-xs hover:text-white transition-colors">{label}</Link>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ))}
