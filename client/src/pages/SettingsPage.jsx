@@ -142,8 +142,8 @@ const SettingsPage = () => {
       const code = event.data.code
       try {
         const res = await api.post('/whatsapp/embedded-signup', { code })
-        setEmbeddedData(res.data.data)
-        toast.success('Business accounts fetched! Select a number below.')
+        setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
+        toast.success('Facebook connected! Now enter your WhatsApp Business details.')
       } catch (err) {
         toast.error(err.response?.data?.message || 'Signup failed')
       }
@@ -355,34 +355,30 @@ const SettingsPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Embedded Signup Result */}
-              {embeddedData && (
+              {/* Embedded Signup Result — manual entry */}
+              {embeddedData?.manualEntry && (
                 <Card>
-                  <CardHeader><CardTitle>Select WhatsApp Number to Connect</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>Enter WhatsApp Business Details</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
-                    {embeddedData.businesses?.map((biz) =>
-                      biz.whatsapp_business_accounts?.data?.map((waba) =>
-                        waba.phone_numbers?.data?.map((phone) => (
-                          <div key={phone.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-green-400 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-                                <Phone size={18} className="text-green-500" />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900 text-sm">{phone.verified_name}</p>
-                                <p className="text-xs text-gray-500">{phone.display_phone_number}</p>
-                                <p className="text-xs text-gray-400">WABA: {waba.name}</p>
-                              </div>
-                            </div>
-                            <Button variant="gradient" size="sm" leftIcon={<CheckCircle size={14} />} loading={loading}
-                              onClick={() => connectEmbeddedPhone(phone, waba, embeddedData.accessToken)}>
-                              Connect
-                            </Button>
-                          </div>
-                        ))
-                      )
-                    )}
-                    <Button variant="secondary" size="sm" onClick={() => setEmbeddedData(null)}>Cancel</Button>
+                    <p className="text-sm text-gray-500">Facebook connected successfully. Enter your WhatsApp Business Account details from <a href="https://business.facebook.com/wa/manage/phone-numbers/" target="_blank" rel="noreferrer" className="text-purple-600 underline">Meta Business Manager</a>.</p>
+                    <Input label="Display Name" placeholder="Business Name" value={newWa.displayName} onChange={(e) => setNewWa({ ...newWa, displayName: e.target.value })} />
+                    <Input label="Phone Number" placeholder="+91 98765 43210" value={newWa.phoneNumber} onChange={(e) => setNewWa({ ...newWa, phoneNumber: e.target.value })} />
+                    <Input label="Phone Number ID" placeholder="From Meta → WhatsApp → Phone Numbers" value={newWa.phoneNumberId} onChange={(e) => setNewWa({ ...newWa, phoneNumberId: e.target.value })} />
+                    <Input label="WABA ID" placeholder="WhatsApp Business Account ID" value={newWa.wabaId} onChange={(e) => setNewWa({ ...newWa, wabaId: e.target.value })} />
+                    <div className="flex gap-3">
+                      <Button variant="secondary" type="button" onClick={() => setEmbeddedData(null)}>Cancel</Button>
+                      <Button variant="gradient" loading={loading} onClick={async () => {
+                        setLoading(true)
+                        try {
+                          await api.post('/whatsapp/accounts', { ...newWa, accessToken: embeddedData.accessToken })
+                          toast.success('WhatsApp account connected!')
+                          setEmbeddedData(null)
+                          setNewWa({ displayName: '', phoneNumber: '', phoneNumberId: '', wabaId: '', accessToken: '' })
+                          fetchWaAccounts()
+                        } catch (err) { toast.error(err.response?.data?.message || 'Failed to connect') }
+                        setLoading(false)
+                      }}>Connect Account</Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
