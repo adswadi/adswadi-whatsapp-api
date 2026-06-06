@@ -134,6 +134,7 @@ router.post('/embedded-signup', authenticate, async (req, res) => {
       params: {
         client_id: process.env.META_APP_ID,
         client_secret: process.env.META_APP_SECRET,
+        redirect_uri: 'https://adswadi.in/',
         code,
       }
     });
