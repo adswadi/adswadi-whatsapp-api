@@ -141,7 +141,7 @@ const SettingsPage = () => {
         setEmbeddedSignupLoading(false)
       },
       {
-        config_id: import.meta.env.VITE_META_CONFIG_ID || '',
+        config_id: import.meta.env.VITE_META_CONFIG_ID || '3046479505553827',
         response_type: 'code',
         override_default_response_type: true,
         extras: {
