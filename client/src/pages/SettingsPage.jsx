@@ -123,35 +123,33 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = useCallback(() => {
+    const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
+    const redirectUri = encodeURIComponent('https://adswadi.in/')
+    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true`
 
-    if (!window.FB) {
-      toast.error('Facebook SDK not loaded. Please refresh and try again.')
+    const popup = window.open(fbUrl, 'fb-signup', 'width=720,height=800,scrollbars=yes,resizable=yes')
+    if (!popup) {
+      toast.error('Popup blocked! Click the address bar icon to allow popups for adswadi.in')
       return
     }
+    setEmbeddedSignupLoading(true)
 
-    // Must call FB.login() synchronously first — before any state updates
-    window.FB.login(async (response) => {
-      if (!response.authResponse?.code) {
-        toast.error('Facebook login cancelled.')
-        setEmbeddedSignupLoading(false)
-        return
-      }
-      setEmbeddedSignupLoading(true)
-      const code = response.authResponse.code
+    const handleMessage = async (event) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'FB_OAUTH_CODE') return
+      window.removeEventListener('message', handleMessage)
       try {
-        const res = await api.post('/whatsapp/embedded-signup', { code })
+        const res = await api.post('/whatsapp/embedded-signup', { code: event.data.code })
         setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
         toast.success('Facebook connected! Enter your WhatsApp Business details below.')
       } catch (err) {
         toast.error(err.response?.data?.message || 'Signup failed')
       }
       setEmbeddedSignupLoading(false)
-    }, {
-      config_id: configId,
-      response_type: 'code',
-      override_default_response_type: true,
-    })
+    }
+    window.addEventListener('message', handleMessage)
+    const t = setInterval(() => { if (popup.closed) { clearInterval(t); window.removeEventListener('message', handleMessage); setEmbeddedSignupLoading(false) } }, 1000)
   }, [])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
