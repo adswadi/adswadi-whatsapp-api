@@ -123,34 +123,45 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = () => {
-    if (!window.FB) return toast.error('Facebook SDK not loaded, please wait...')
+    const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
+    const redirectUri = encodeURIComponent(window.location.origin + '/settings')
+    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true`
+
+    const popup = window.open(fbUrl, 'fb-login', 'width=600,height=700,scrollbars=yes,resizable=yes')
+    if (!popup) {
+      toast.error('Popup blocked! Please allow popups for adswadi.in in browser settings and try again.')
+      return
+    }
     setEmbeddedSignupLoading(true)
-    window.FB.login(
-      async (response) => {
-        if (response.authResponse?.code) {
+
+    const timer = setInterval(async () => {
+      try {
+        if (popup.closed) {
+          clearInterval(timer)
+          setEmbeddedSignupLoading(false)
+          return
+        }
+        let code = null
+        try {
+          const params = new URLSearchParams(popup.location.search)
+          code = params.get('code')
+        } catch (_) { return }
+
+        if (code) {
+          clearInterval(timer)
+          popup.close()
           try {
-            const res = await api.post('/whatsapp/embedded-signup', { code: response.authResponse.code })
+            const res = await api.post('/whatsapp/embedded-signup', { code })
             setEmbeddedData(res.data.data)
             toast.success('Business accounts fetched!')
           } catch (err) {
             toast.error(err.response?.data?.message || 'Signup failed')
           }
-        } else {
-          toast.error('Login cancelled or failed')
+          setEmbeddedSignupLoading(false)
         }
-        setEmbeddedSignupLoading(false)
-      },
-      {
-        config_id: import.meta.env.VITE_META_CONFIG_ID || '3046479505553827',
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: {
-          setup: {},
-          featureType: '',
-          sessionInfoVersion: '3',
-        },
-      }
-    )
+      } catch (_) {}
+    }, 500)
   }
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
