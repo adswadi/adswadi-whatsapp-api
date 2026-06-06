@@ -122,7 +122,7 @@ const SettingsPage = () => {
     setLoading(false)
   }
 
-  const launchEmbeddedSignup = () => {
+  const launchEmbeddedSignup = useCallback(() => {
     const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
     const redirectUri = encodeURIComponent('https://adswadi.in/')
@@ -135,34 +135,31 @@ const SettingsPage = () => {
     }
     setEmbeddedSignupLoading(true)
 
-    const timer = setInterval(async () => {
+    const handleMessage = async (event) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'FB_OAUTH_CODE') return
+      window.removeEventListener('message', handleMessage)
+      const code = event.data.code
       try {
-        if (popup.closed) {
-          clearInterval(timer)
-          setEmbeddedSignupLoading(false)
-          return
-        }
-        let code = null
-        try {
-          const params = new URLSearchParams(popup.location.search)
-          code = params.get('code')
-        } catch (_) { return }
+        const res = await api.post('/whatsapp/embedded-signup', { code })
+        setEmbeddedData(res.data.data)
+        toast.success('Business accounts fetched! Select a number below.')
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Signup failed')
+      }
+      setEmbeddedSignupLoading(false)
+    }
 
-        if (code) {
-          clearInterval(timer)
-          popup.close()
-          try {
-            const res = await api.post('/whatsapp/embedded-signup', { code })
-            setEmbeddedData(res.data.data)
-            toast.success('Business accounts fetched!')
-          } catch (err) {
-            toast.error(err.response?.data?.message || 'Signup failed')
-          }
-          setEmbeddedSignupLoading(false)
-        }
-      } catch (_) {}
-    }, 500)
-  }
+    window.addEventListener('message', handleMessage)
+
+    const closedTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(closedTimer)
+        window.removeEventListener('message', handleMessage)
+        setEmbeddedSignupLoading(false)
+      }
+    }, 1000)
+  }, [])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
     setLoading(true)

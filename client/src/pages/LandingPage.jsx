@@ -468,6 +468,15 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(null)
   const [activeFeature, setActiveFeature] = useState(0)
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code && window.opener) {
+      window.opener.postMessage({ type: 'FB_OAUTH_CODE', code }, window.location.origin)
+      window.close()
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-white font-dm text-gray-900 overflow-x-hidden">
       <style>{`
