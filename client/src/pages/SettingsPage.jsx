@@ -123,42 +123,34 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = useCallback(() => {
-    const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
-    const redirectUri = encodeURIComponent('https://adswadi.in/')
-    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true`
 
-    const popup = window.open(fbUrl, 'fb-login', 'width=600,height=700,scrollbars=yes,resizable=yes')
-    if (!popup) {
-      toast.error('Popup blocked! Please allow popups for adswadi.in in browser settings and try again.')
+    if (!window.FB) {
+      toast.error('Facebook SDK not loaded yet. Please wait a moment and try again.')
       return
     }
+
     setEmbeddedSignupLoading(true)
 
-    const handleMessage = async (event) => {
-      if (event.origin !== window.location.origin) return
-      if (event.data?.type !== 'FB_OAUTH_CODE') return
-      window.removeEventListener('message', handleMessage)
-      const code = event.data.code
-      try {
-        const res = await api.post('/whatsapp/embedded-signup', { code })
-        setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
-        toast.success('Facebook connected! Now enter your WhatsApp Business details.')
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Signup failed')
+    window.FB.login(async (response) => {
+      if (response.authResponse?.code) {
+        const code = response.authResponse.code
+        try {
+          const res = await api.post('/whatsapp/embedded-signup', { code })
+          setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
+          toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Signup failed')
+        }
+      } else {
+        toast.error('Facebook login cancelled or failed.')
       }
       setEmbeddedSignupLoading(false)
-    }
-
-    window.addEventListener('message', handleMessage)
-
-    const closedTimer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(closedTimer)
-        window.removeEventListener('message', handleMessage)
-        setEmbeddedSignupLoading(false)
-      }
-    }, 1000)
+    }, {
+      config_id: configId,
+      response_type: 'code',
+      override_default_response_type: true,
+    })
   }, [])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
