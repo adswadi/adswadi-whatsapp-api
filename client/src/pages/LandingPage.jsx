@@ -1011,8 +1011,8 @@ export default function LandingPage() {
                 </div>
               </div>
               <p className="text-xs leading-relaxed mb-4">India's most powerful WhatsApp Marketing Platform. Officially powered by Meta.</p>
-              <p className="text-xs">📞 +91 98739 40683</p>
-              <p className="text-xs mt-1">📧 support@adswadi.com</p>
+              <p className="text-xs">📞 +91 8678830021</p>
+              <p className="text-xs mt-1">📧 adswadiofficial@gmail.com</p>
             </div>
 
             {[

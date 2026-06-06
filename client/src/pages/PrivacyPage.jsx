@@ -86,7 +86,7 @@ const PrivacyPage = () => (
           <li>Export your data in a portable format</li>
           <li>Withdraw consent at any time</li>
         </ul>
-        <p>To exercise these rights, email us at <a href="mailto:privacy@adswadi.com" className="text-purple-600 underline">privacy@adswadi.com</a></p>
+        <p>To exercise these rights, email us at <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a></p>
       </Section>
 
       <Section title="8. Cookies">
@@ -99,7 +99,7 @@ const PrivacyPage = () => (
 
       <Section title="10. Contact Us">
         <p>For privacy-related queries:</p>
-        <p>📧 <a href="mailto:privacy@adswadi.com" className="text-purple-600 underline">privacy@adswadi.com</a></p>
+        <p>📧 <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a></p>
         <p>📍 Adswadi, India</p>
       </Section>
     </div>

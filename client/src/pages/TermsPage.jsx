@@ -64,7 +64,7 @@ const TermsPage = () => (
       </Section>
 
       <Section title="6. Account Responsibilities">
-        <p>You are responsible for maintaining the confidentiality of your account credentials. You must notify us immediately at <a href="mailto:support@adswadi.com" className="text-purple-600 underline">support@adswadi.com</a> if you suspect unauthorized access.</p>
+        <p>You are responsible for maintaining the confidentiality of your account credentials. You must notify us immediately at <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a> if you suspect unauthorized access.</p>
       </Section>
 
       <Section title="7. Subscription & Billing">
@@ -88,8 +88,8 @@ const TermsPage = () => (
       </Section>
 
       <Section title="12. Contact">
-        <p>📧 <a href="mailto:legal@adswadi.com" className="text-purple-600 underline">legal@adswadi.com</a></p>
-        <p>📞 +91 98739 40683</p>
+        <p>📧 <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a></p>
+        <p>📞 +91 8678830021</p>
       </Section>
     </div>
 

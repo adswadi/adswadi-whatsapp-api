@@ -69,7 +69,7 @@ const CareersPage = () => (
                 <p className="text-sm text-gray-400">{type} · {location}</p>
               </div>
               <a
-                href={`mailto:careers@adswadi.com?subject=Application for ${title}`}
+                href={`mailto:adswadiofficial@gmail.com?subject=Application for ${title}`}
                 className="text-sm font-semibold text-white px-4 py-2 rounded-xl transition-all"
                 style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}
               >
@@ -91,10 +91,10 @@ const CareersPage = () => (
         <h2 className="text-2xl font-bold mb-2">Don't See a Fit?</h2>
         <p className="text-white/80 mb-6">We're always looking for talented people. Send us your resume and we'll keep you in mind.</p>
         <a
-          href="mailto:careers@adswadi.com?subject=General Application"
+          href="mailto:adswadiofficial@gmail.com?subject=General Application"
           className="inline-block bg-white text-purple-700 font-bold px-6 py-3 rounded-xl text-sm hover:bg-gray-100 transition-colors"
         >
-          📧 careers@adswadi.com
+          📧 adswadiofficial@gmail.com
         </a>
       </div>
     </div>

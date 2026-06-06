@@ -81,13 +81,13 @@ const PartnerPage = () => (
         <h2 className="text-2xl font-bold mb-2">Ready to Partner with Adswadi?</h2>
         <p className="text-gray-400 mb-6">Join 500+ partners already earning with us. Apply today and our team will reach out within 24 hours.</p>
         <a
-          href="mailto:partners@adswadi.com?subject=Partner Program Application"
+          href="mailto:adswadiofficial@gmail.com?subject=Partner Program Application"
           className="inline-block font-bold px-8 py-3 rounded-xl text-sm transition-all"
           style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}
         >
           Apply to Partner Program →
         </a>
-        <p className="text-gray-500 text-xs mt-4">📧 partners@adswadi.com · 📞 +91 98739 40683</p>
+        <p className="text-gray-500 text-xs mt-4">📧 adswadiofficial@gmail.com · 📞 +91 8678830021</p>
       </div>
     </div>
 

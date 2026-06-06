@@ -78,8 +78,8 @@ const AboutPage = () => (
         <h2 className="text-2xl font-bold mb-2">Get in Touch</h2>
         <p className="text-gray-400 mb-6">Have questions? We'd love to hear from you.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="mailto:support@adswadi.com" className="bg-white text-gray-900 px-6 py-3 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-colors">📧 support@adswadi.com</a>
-          <a href="tel:+919873940683" className="border border-gray-700 px-6 py-3 rounded-xl font-semibold text-sm hover:border-gray-500 transition-colors">📞 +91 98739 40683</a>
+          <a href="mailto:adswadiofficial@gmail.com" className="bg-white text-gray-900 px-6 py-3 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-colors">📧 adswadiofficial@gmail.com</a>
+          <a href="tel:+918678830021" className="border border-gray-700 px-6 py-3 rounded-xl font-semibold text-sm hover:border-gray-500 transition-colors">📞 +91 8678830021</a>
         </div>
       </div>
     </div>

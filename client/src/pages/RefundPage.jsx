@@ -31,7 +31,7 @@ const RefundPage = () => (
 
       <Section title="1. 7-Day Money-Back Guarantee">
         <p>If you are not satisfied with Adswadi for any reason, you may request a full refund within <strong>7 days</strong> of your initial subscription payment. This applies to first-time subscribers on any paid plan.</p>
-        <p>To request a refund, email us at <a href="mailto:billing@adswadi.com" className="text-purple-600 underline">billing@adswadi.com</a> with your registered email and reason for refund.</p>
+        <p>To request a refund, email us at <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a> with your registered email and reason for refund.</p>
       </Section>
 
       <Section title="2. Eligibility for Refunds">
@@ -73,7 +73,7 @@ const RefundPage = () => (
       </Section>
 
       <Section title="7. How to Request a Refund">
-        <p>Email <a href="mailto:billing@adswadi.com" className="text-purple-600 underline">billing@adswadi.com</a> with:</p>
+        <p>Email <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a> with:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Your registered email address</li>
           <li>Payment transaction ID</li>
@@ -83,8 +83,8 @@ const RefundPage = () => (
       </Section>
 
       <Section title="8. Contact">
-        <p>📧 <a href="mailto:billing@adswadi.com" className="text-purple-600 underline">billing@adswadi.com</a></p>
-        <p>📞 +91 98739 40683 (Mon–Sat, 10am–6pm IST)</p>
+        <p>📧 <a href="mailto:adswadiofficial@gmail.com" className="text-purple-600 underline">adswadiofficial@gmail.com</a></p>
+        <p>📞 +91 8678830021 (Mon–Sat, 10am–6pm IST)</p>
       </Section>
     </div>
 
