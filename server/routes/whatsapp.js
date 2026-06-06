@@ -141,9 +141,9 @@ router.post('/embedded-signup', authenticate, async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // Get WABA list
-    const wabaRes = await axios.get(`https://graph.facebook.com/v18.0/me/businesses`, {
-      params: { access_token: accessToken, fields: 'id,name,whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number,verified_name}}' }
+    // Get WhatsApp Business Accounts directly
+    const wabaRes = await axios.get(`https://graph.facebook.com/v18.0/me/whatsapp_business_accounts`, {
+      params: { access_token: accessToken, fields: 'id,name,phone_numbers{id,display_phone_number,verified_name}' }
     });
 
     return success(res, { accessToken, businesses: wabaRes.data.data || [] });
