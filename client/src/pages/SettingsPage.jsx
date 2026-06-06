@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Settings, User, Bell, Phone, Shield, Users, Plus, Trash2, Eye, EyeOff, Save } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { Settings, User, Bell, Phone, Shield, Users, Plus, Trash2, Eye, EyeOff, Save, CheckCircle } from 'lucide-react'
 import api from '@/lib/api'
 import useAuthStore from '@/store/authStore'
 import Button from '@/components/ui/Button'
@@ -32,6 +32,28 @@ const SettingsPage = () => {
   const [inviteEmail, setInviteEmail] = useState('')
   const [newWa, setNewWa] = useState({ displayName: '', phoneNumber: '', phoneNumberId: '', wabaId: '', accessToken: '' })
   const [showAddWa, setShowAddWa] = useState(false)
+  const [embeddedSignupLoading, setEmbeddedSignupLoading] = useState(false)
+  const [embeddedData, setEmbeddedData] = useState(null) // { accessToken, businesses }
+  const [selectedPhone, setSelectedPhone] = useState(null)
+
+  useEffect(() => {
+    // Load Facebook SDK
+    if (!window.FB) {
+      window.fbAsyncInit = function () {
+        window.FB.init({
+          appId: import.meta.env.VITE_META_APP_ID || '1697351797957862',
+          autoLogAppEvents: true,
+          xfbml: true,
+          version: 'v18.0',
+        })
+      }
+      const script = document.createElement('script')
+      script.src = 'https://connect.facebook.net/en_US/sdk.js'
+      script.async = true
+      script.defer = true
+      document.body.appendChild(script)
+    }
+  }, [])
 
   useEffect(() => {
     if (user) {
@@ -97,6 +119,57 @@ const SettingsPage = () => {
       setShowAddWa(false)
       fetchWaAccounts()
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to connect') }
+    setLoading(false)
+  }
+
+  const launchEmbeddedSignup = () => {
+    if (!window.FB) return toast.error('Facebook SDK not loaded, please wait...')
+    setEmbeddedSignupLoading(true)
+    window.FB.login(
+      async (response) => {
+        if (response.authResponse?.code) {
+          try {
+            const res = await api.post('/whatsapp/embedded-signup', { code: response.authResponse.code })
+            setEmbeddedData(res.data.data)
+            toast.success('Business accounts fetched!')
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Signup failed')
+          }
+        } else {
+          toast.error('Login cancelled or failed')
+        }
+        setEmbeddedSignupLoading(false)
+      },
+      {
+        config_id: import.meta.env.VITE_META_CONFIG_ID || '',
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {},
+          featureType: '',
+          sessionInfoVersion: '3',
+        },
+      }
+    )
+  }
+
+  const connectEmbeddedPhone = async (phone, waba, accessToken) => {
+    setLoading(true)
+    try {
+      await api.post('/whatsapp/embedded-signup/connect', {
+        accessToken,
+        phoneNumberId: phone.id,
+        wabaId: waba.id,
+        displayName: phone.verified_name || waba.name,
+        phoneNumber: phone.display_phone_number,
+      })
+      toast.success('WhatsApp number connected!')
+      setEmbeddedData(null)
+      setSelectedPhone(null)
+      fetchWaAccounts()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to connect')
+    }
     setLoading(false)
   }
 
@@ -227,23 +300,34 @@ const SettingsPage = () => {
               <Card>
                 <CardHeader className="flex-row items-center justify-between">
                   <CardTitle>Connected Accounts</CardTitle>
-                  <Button variant="gradient" size="sm" leftIcon={<Plus size={14} />} onClick={() => setShowAddWa(!showAddWa)}>
-                    Add Account
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="gradient" size="sm" leftIcon={<Plus size={14} />} onClick={launchEmbeddedSignup} loading={embeddedSignupLoading}>
+                      Connect via Facebook
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setShowAddWa(!showAddWa)}>
+                      Manual
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {waAccounts.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Phone size={28} className="mx-auto text-gray-200 mb-2" />
-                      <p className="text-sm text-gray-400">No WhatsApp accounts connected</p>
+                    <div className="text-center py-10">
+                      <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <Phone size={28} className="text-green-500" />
+                      </div>
+                      <p className="font-semibold text-gray-700 mb-1">No WhatsApp accounts connected</p>
+                      <p className="text-sm text-gray-400 mb-4">Connect your WhatsApp Business number to start sending messages</p>
+                      <Button variant="gradient" leftIcon={<Plus size={14} />} onClick={launchEmbeddedSignup} loading={embeddedSignupLoading}>
+                        Connect WhatsApp via Facebook
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {waAccounts.map((acc) => (
                         <div key={acc._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-whatsapp/10 rounded-xl flex items-center justify-center">
-                              <Phone size={18} className="text-whatsapp" />
+                            <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                              <Phone size={18} className="text-green-500" />
                             </div>
                             <div>
                               <p className="font-semibold text-gray-900 text-sm">{acc.displayName}</p>
@@ -263,9 +347,41 @@ const SettingsPage = () => {
                 </CardContent>
               </Card>
 
+              {/* Embedded Signup Result */}
+              {embeddedData && (
+                <Card>
+                  <CardHeader><CardTitle>Select WhatsApp Number to Connect</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {embeddedData.businesses?.map((biz) =>
+                      biz.whatsapp_business_accounts?.data?.map((waba) =>
+                        waba.phone_numbers?.data?.map((phone) => (
+                          <div key={phone.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-green-400 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                                <Phone size={18} className="text-green-500" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 text-sm">{phone.verified_name}</p>
+                                <p className="text-xs text-gray-500">{phone.display_phone_number}</p>
+                                <p className="text-xs text-gray-400">WABA: {waba.name}</p>
+                              </div>
+                            </div>
+                            <Button variant="gradient" size="sm" leftIcon={<CheckCircle size={14} />} loading={loading}
+                              onClick={() => connectEmbeddedPhone(phone, waba, embeddedData.accessToken)}>
+                              Connect
+                            </Button>
+                          </div>
+                        ))
+                      )
+                    )}
+                    <Button variant="secondary" size="sm" onClick={() => setEmbeddedData(null)}>Cancel</Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {showAddWa && (
                 <Card>
-                  <CardHeader><CardTitle>Connect New WhatsApp Account</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>Manual Connect</CardTitle></CardHeader>
                   <form onSubmit={addWaAccount}>
                     <CardContent className="space-y-3">
                       <Input label="Display Name" placeholder="Business Name" value={newWa.displayName} onChange={(e) => setNewWa({ ...newWa, displayName: e.target.value })} />
