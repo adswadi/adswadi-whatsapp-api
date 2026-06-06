@@ -126,7 +126,8 @@ const SettingsPage = () => {
     const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
     const redirectUri = encodeURIComponent('https://adswadi.in/')
-    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true`
+    const scope = encodeURIComponent('whatsapp_business_management,whatsapp_business_messaging,business_management,public_profile')
+    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&scope=${scope}&override_default_response_type=true`
 
     const popup = window.open(fbUrl, 'fb-login', 'width=600,height=700,scrollbars=yes,resizable=yes')
     if (!popup) {
