@@ -123,23 +123,22 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = useCallback(() => {
-    const appId = import.meta.env.VITE_META_APP_ID || '1697351797957862'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '3046479505553827'
-    const redirectUri = encodeURIComponent('https://adswadi.in/')
-    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true`
 
-    const popup = window.open(fbUrl, 'fb-embedded-signup', 'width=720,height=800,scrollbars=yes,resizable=yes')
-    if (!popup) {
-      toast.error('Popup blocked! Allow popups for adswadi.in and try again.')
+    if (!window.FB) {
+      toast.error('Facebook SDK not loaded. Please refresh and try again.')
       return
     }
-    setEmbeddedSignupLoading(true)
 
-    const handleMessage = async (event) => {
-      if (event.origin !== window.location.origin) return
-      if (event.data?.type !== 'FB_OAUTH_CODE') return
-      window.removeEventListener('message', handleMessage)
-      const code = event.data.code
+    // Must call FB.login() synchronously first — before any state updates
+    window.FB.login(async (response) => {
+      if (!response.authResponse?.code) {
+        toast.error('Facebook login cancelled.')
+        setEmbeddedSignupLoading(false)
+        return
+      }
+      setEmbeddedSignupLoading(true)
+      const code = response.authResponse.code
       try {
         const res = await api.post('/whatsapp/embedded-signup', { code })
         setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
@@ -148,17 +147,11 @@ const SettingsPage = () => {
         toast.error(err.response?.data?.message || 'Signup failed')
       }
       setEmbeddedSignupLoading(false)
-    }
-
-    window.addEventListener('message', handleMessage)
-
-    const closedTimer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(closedTimer)
-        window.removeEventListener('message', handleMessage)
-        setEmbeddedSignupLoading(false)
-      }
-    }, 1000)
+    }, {
+      config_id: configId,
+      response_type: 'code',
+      override_default_response_type: true,
+    })
   }, [])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
