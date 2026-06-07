@@ -136,22 +136,97 @@ const SettingsPage = () => {
     }
     setEmbeddedSignupLoading(true)
 
-    const handleMessage = async (event) => {
-      if (event.origin !== window.location.origin) return
-      if (event.data?.type !== 'FB_OAUTH_CODE') return
+    // Store session data from Meta's WA_EMBEDDED_SIGNUP postMessage
+    let waSessionData = null
+    let oauthCode = null
+    let done = false
+
+    const cleanup = (interval) => {
       window.removeEventListener('message', handleMessage)
+      if (interval) clearInterval(interval)
+    }
+
+    const tryAutoConnect = async (interval) => {
+      if (done) return
+      if (!waSessionData || !oauthCode) return
+      done = true
+      cleanup(interval)
       try {
-        const res = await api.post('/whatsapp/embedded-signup', { code: event.data.code })
-        setEmbeddedData({ accessToken: res.data.data.accessToken, manualEntry: true })
-        toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+        const res = await api.post('/whatsapp/embedded-signup', { code: oauthCode })
+        const accessToken = res.data.data.accessToken
+        await api.post('/whatsapp/embedded-signup/connect', {
+          accessToken,
+          phoneNumberId: waSessionData.phone_number_id,
+          wabaId: waSessionData.waba_id,
+          displayName: 'WhatsApp Business',
+          phoneNumber: '',
+        })
+        toast.success('🎉 WhatsApp number connected successfully!')
+        setEmbeddedData(null)
+        fetchWaAccounts()
       } catch (err) {
-        toast.error(err.response?.data?.message || 'Signup failed')
+        toast.error(err.response?.data?.message || 'Auto-connect failed. Please enter details manually.')
+        setEmbeddedData({ accessToken: null, manualEntry: true, phoneNumberId: waSessionData?.phone_number_id, wabaId: waSessionData?.waba_id })
       }
       setEmbeddedSignupLoading(false)
     }
+
+    const handleMessage = async (event) => {
+      // 1. Listen for Meta's WhatsApp Embedded Signup session data (from facebook.com)
+      if (event.origin === 'https://www.facebook.com') {
+        if (event.data?.type === 'WA_EMBEDDED_SIGNUP') {
+          if (event.data.event === 'FINISH') {
+            waSessionData = event.data.data // { phone_number_id, waba_id }
+            tryAutoConnect(pollInterval)
+          } else if (event.data.event === 'CANCEL') {
+            cleanup(pollInterval)
+            setEmbeddedSignupLoading(false)
+            toast('Signup cancelled')
+          } else if (event.data.event === 'ERROR') {
+            cleanup(pollInterval)
+            setEmbeddedSignupLoading(false)
+            toast.error('WhatsApp signup error: ' + (event.data.data?.error_message || 'Unknown error'))
+          }
+        }
+        return
+      }
+
+      // 2. Listen for OAuth code from our redirect page (LandingPage posts FB_OAUTH_CODE)
+      if (event.origin === window.location.origin && event.data?.type === 'FB_OAUTH_CODE') {
+        oauthCode = event.data.code
+        if (waSessionData) {
+          // Auto-connect: we have both session data + code
+          tryAutoConnect(pollInterval)
+        } else {
+          // No session data yet — exchange code and try auto-fetch WABA
+          window.removeEventListener('message', handleMessage)
+          try {
+            const res = await api.post('/whatsapp/embedded-signup', { code: oauthCode })
+            const { accessToken, wabas } = res.data.data
+            if (wabas && wabas.length > 0) {
+              setEmbeddedData({ accessToken, wabas, manualEntry: false })
+              toast.success('Facebook connected! Select your WhatsApp number below.')
+            } else {
+              setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
+              toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+            }
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Signup failed')
+          }
+          setEmbeddedSignupLoading(false)
+        }
+      }
+    }
+
     window.addEventListener('message', handleMessage)
-    const t = setInterval(() => { if (popup.closed) { clearInterval(t); window.removeEventListener('message', handleMessage); setEmbeddedSignupLoading(false) } }, 1000)
-  }, [])
+    let pollInterval
+    pollInterval = setInterval(() => {
+      if (popup.closed && !done) {
+        cleanup(pollInterval)
+        setEmbeddedSignupLoading(false)
+      }
+    }, 1000)
+  }, [fetchWaAccounts])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
     setLoading(true)
@@ -347,6 +422,39 @@ const SettingsPage = () => {
                 </CardContent>
               </Card>
 
+              {/* Embedded Signup Result — WABA phone list */}
+              {embeddedData && !embeddedData.manualEntry && embeddedData.wabas?.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle>Select Your WhatsApp Number</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-gray-500">Facebook connected! Select the WhatsApp Business number you want to connect:</p>
+                    {embeddedData.wabas.map((waba) => (
+                      <div key={waba.id} className="border border-gray-100 rounded-xl p-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2">WABA: {waba.name} ({waba.id})</p>
+                        {(waba.phone_numbers?.data || []).map((phone) => (
+                          <div key={phone.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2 last:mb-0">
+                            <div>
+                              <p className="font-semibold text-gray-900 text-sm">{phone.verified_name || phone.display_phone_number}</p>
+                              <p className="text-xs text-gray-500">{phone.display_phone_number}</p>
+                              <span className={`text-xs font-medium ${phone.code_verification_status === 'VERIFIED' ? 'text-green-600' : 'text-yellow-600'}`}>
+                                {phone.code_verification_status === 'VERIFIED' ? '✓ Verified' : 'Not Verified'}
+                              </span>
+                            </div>
+                            <Button variant="gradient" size="sm" loading={loading} onClick={() => connectEmbeddedPhone(phone, waba, embeddedData.accessToken)}>
+                              Connect
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <Button variant="secondary" size="sm" onClick={() => setEmbeddedData({ ...embeddedData, manualEntry: true })}>
+                      Enter details manually instead
+                    </Button>
+                    <button onClick={() => setEmbeddedData(null)} className="text-xs text-gray-400 hover:text-gray-600 ml-3">Cancel</button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Embedded Signup Result — manual entry */}
               {embeddedData?.manualEntry && (
                 <Card>
@@ -355,14 +463,19 @@ const SettingsPage = () => {
                     <p className="text-sm text-gray-500">Facebook connected successfully. Enter your WhatsApp Business Account details from <a href="https://business.facebook.com/wa/manage/phone-numbers/" target="_blank" rel="noreferrer" className="text-purple-600 underline">Meta Business Manager</a>.</p>
                     <Input label="Display Name" placeholder="Business Name" value={newWa.displayName} onChange={(e) => setNewWa({ ...newWa, displayName: e.target.value })} />
                     <Input label="Phone Number" placeholder="+91 98765 43210" value={newWa.phoneNumber} onChange={(e) => setNewWa({ ...newWa, phoneNumber: e.target.value })} />
-                    <Input label="Phone Number ID" placeholder="From Meta → WhatsApp → Phone Numbers" value={newWa.phoneNumberId} onChange={(e) => setNewWa({ ...newWa, phoneNumberId: e.target.value })} />
-                    <Input label="WABA ID" placeholder="WhatsApp Business Account ID" value={newWa.wabaId} onChange={(e) => setNewWa({ ...newWa, wabaId: e.target.value })} />
+                    <Input label="Phone Number ID" placeholder="From Meta → WhatsApp → Phone Numbers" value={embeddedData.phoneNumberId || newWa.phoneNumberId} onChange={(e) => setNewWa({ ...newWa, phoneNumberId: e.target.value })} />
+                    <Input label="WABA ID" placeholder="WhatsApp Business Account ID" value={embeddedData.wabaId || newWa.wabaId} onChange={(e) => setNewWa({ ...newWa, wabaId: e.target.value })} />
                     <div className="flex gap-3">
                       <Button variant="secondary" type="button" onClick={() => setEmbeddedData(null)}>Cancel</Button>
                       <Button variant="gradient" loading={loading} onClick={async () => {
                         setLoading(true)
                         try {
-                          await api.post('/whatsapp/accounts', { ...newWa, accessToken: embeddedData.accessToken })
+                          await api.post('/whatsapp/accounts', {
+                            ...newWa,
+                            phoneNumberId: embeddedData.phoneNumberId || newWa.phoneNumberId,
+                            wabaId: embeddedData.wabaId || newWa.wabaId,
+                            accessToken: embeddedData.accessToken,
+                          })
                           toast.success('WhatsApp account connected!')
                           setEmbeddedData(null)
                           setNewWa({ displayName: '', phoneNumber: '', phoneNumberId: '', wabaId: '', accessToken: '' })

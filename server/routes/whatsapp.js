@@ -141,8 +141,21 @@ router.post('/embedded-signup', authenticate, async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // Return token only — user will enter WABA ID and phone number manually
-    return success(res, { accessToken, businesses: [] });
+    // Try to fetch WABA + phone numbers automatically
+    let wabas = [];
+    try {
+      const wabaRes = await axios.get(`https://graph.facebook.com/v18.0/me/whatsapp_business_accounts`, {
+        params: {
+          access_token: accessToken,
+          fields: 'id,name,phone_numbers{id,display_phone_number,verified_name,code_verification_status}',
+        }
+      });
+      wabas = wabaRes.data.data || [];
+    } catch (wabaErr) {
+      console.log('Could not auto-fetch WABA (normal for some apps):', wabaErr?.response?.data?.error?.message);
+    }
+
+    return success(res, { accessToken, wabas });
   } catch (err) {
     console.error('Embedded signup error:', err?.response?.data || err.message);
     return error(res, err?.response?.data?.error?.message || 'Embedded signup failed', 500);
