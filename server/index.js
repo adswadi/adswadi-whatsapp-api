@@ -121,10 +121,21 @@ app.use('/api/team', teamRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/webhook', webhookRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
-});
+// Serve React frontend in production
+const path = require('path');
+const fs = require('fs');
+const clientDistPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+} else {
+  // 404 handler (development / API-only mode)
+  app.use((req, res) => {
+    res.status(404).json({ success: false, message: 'Route not found' });
+  });
+}
 
 // Global error handler
 app.use((err, req, res, next) => {

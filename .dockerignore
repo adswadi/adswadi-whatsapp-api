@@ -1,0 +1,9 @@
+server/node_modules
+client/node_modules
+client/dist
+.git
+*.md
+deploy.sh
+nginx.conf
+docker-compose.yml
+.env
