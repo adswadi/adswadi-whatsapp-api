@@ -64,7 +64,7 @@ const sendInviteEmail = async (email, inviterName, inviteToken, organizationName
 };
 
 const sendWelcomeEmail = async (email, name) => {
-  await sendEmail({
+  try { await sendEmail({
     to: email,
     subject: 'Welcome to Adswadi WhatsApp API!',
     html: `
@@ -80,7 +80,7 @@ const sendWelcomeEmail = async (email, name) => {
       </div>
     `,
     text: `Welcome ${name}! Visit ${process.env.CLIENT_URL}/onboarding to get started.`,
-  });
+  }); } catch (_) {}
 };
 
 module.exports = { sendEmail, sendInviteEmail, sendWelcomeEmail };
