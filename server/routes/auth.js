@@ -32,9 +32,8 @@ router.post('/register', async (req, res) => {
     const user = await User.create({ name, email, password, organizationName: organizationName || name + "'s Team" });
 
     const { accessToken, refreshToken } = generateTokens(user._id);
-    user.refreshToken = refreshToken;
-    user.lastLogin = new Date();
-    await user.save();
+
+    await User.findByIdAndUpdate(user._id, { refreshToken, lastLogin: new Date() });
 
     try { await sendWelcomeEmail(email, name); } catch (_) {}
 
