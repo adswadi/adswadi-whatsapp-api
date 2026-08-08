@@ -35,7 +35,7 @@ router.post('/register', async (req, res) => {
 
     await User.findByIdAndUpdate(user._id, { refreshToken, lastLogin: new Date() });
 
-    try { await sendWelcomeEmail(email, name); } catch (_) {}
+    sendWelcomeEmail(email, name).catch(() => {});
 
     return success(res, { user, accessToken, refreshToken }, 'Registration successful', 201);
   } catch (err) {
