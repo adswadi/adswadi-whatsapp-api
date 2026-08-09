@@ -128,18 +128,34 @@ router.post('/embedded-signup', authenticate, async (req, res) => {
     if (!code) return error(res, 'Code is required', 400);
 
     const axios = require('axios');
+    const redirectUri = `${process.env.CLIENT_URL || 'https://app.adswadi.com'}/`;
 
-    // Exchange code for access token
-    const tokenRes = await axios.get(`https://graph.facebook.com/v18.0/oauth/access_token`, {
+    // Exchange code for a short-lived access token
+    const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
       params: {
         client_id: process.env.META_APP_ID,
         client_secret: process.env.META_APP_SECRET,
-        redirect_uri: 'https://adswadi.in/',
+        redirect_uri: redirectUri,
         code,
       }
     });
 
-    const accessToken = tokenRes.data.access_token;
+    let accessToken = tokenRes.data.access_token;
+
+    // Exchange for a long-lived token (~60 days) so customers don't get disconnected quickly
+    try {
+      const longLivedRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
+        params: {
+          grant_type: 'fb_exchange_token',
+          client_id: process.env.META_APP_ID,
+          client_secret: process.env.META_APP_SECRET,
+          fb_exchange_token: accessToken,
+        }
+      });
+      accessToken = longLivedRes.data.access_token;
+    } catch (exchangeErr) {
+      console.log('Long-lived token exchange failed, using short-lived token:', exchangeErr?.response?.data?.error?.message);
+    }
 
     // Try to fetch WABA + phone numbers automatically
     let wabas = [];
@@ -167,6 +183,18 @@ router.post('/embedded-signup/connect', authenticate, async (req, res) => {
   try {
     const { accessToken, phoneNumberId, wabaId, displayName, phoneNumber } = req.body;
     if (!accessToken || !phoneNumberId || !wabaId) return error(res, 'Missing required fields', 400);
+
+    const axios = require('axios');
+
+    // Subscribe our app to this customer's WABA — without this, their incoming
+    // messages never reach our webhook even though our app-level webhook is configured.
+    try {
+      await axios.post(`https://graph.facebook.com/v20.0/${wabaId}/subscribed_apps`, null, {
+        params: { access_token: accessToken },
+      });
+    } catch (subErr) {
+      console.error('WABA subscribe error:', subErr?.response?.data || subErr.message);
+    }
 
     const encryptedToken = encrypt(accessToken);
 
