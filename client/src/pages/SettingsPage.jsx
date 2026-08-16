@@ -41,7 +41,7 @@ const SettingsPage = () => {
     if (!window.FB) {
       window.fbAsyncInit = function () {
         window.FB.init({
-          appId: import.meta.env.VITE_META_APP_ID || '1364529115170900',
+          appId: import.meta.env.VITE_META_APP_ID || '1271603524954079',
           autoLogAppEvents: true,
           xfbml: true,
           version: 'v18.0',
@@ -123,8 +123,8 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = useCallback(() => {
-    const appId = import.meta.env.VITE_META_APP_ID || '1364529115170900'
-    const configId = import.meta.env.VITE_META_CONFIG_ID || '1869259680703911'
+    const appId = import.meta.env.VITE_META_APP_ID || '1271603524954079'
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '919429627305295'
     const redirectUri = encodeURIComponent(`${window.location.origin}/`)
     const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: '', sessionInfoVersion: '3' }))
     const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true&extras=${extras}`
