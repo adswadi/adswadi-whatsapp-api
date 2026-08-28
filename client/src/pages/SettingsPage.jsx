@@ -127,7 +127,7 @@ const SettingsPage = () => {
       toast.error('Facebook SDK is still loading, please try again in a moment')
       return
     }
-    const configId = import.meta.env.VITE_META_CONFIG_ID || '919429627305295'
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '1744062660144243'
     setEmbeddedSignupLoading(true)
 
     // Meta sends the chosen WABA + phone number here while the FB.login
