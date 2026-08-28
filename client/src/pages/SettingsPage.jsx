@@ -44,7 +44,7 @@ const SettingsPage = () => {
           appId: import.meta.env.VITE_META_APP_ID || '1271603524954079',
           autoLogAppEvents: true,
           xfbml: true,
-          version: 'v18.0',
+          version: 'v21.0',
         })
       }
       const script = document.createElement('script')
