@@ -134,17 +134,22 @@ const SettingsPage = () => {
     // popup is still open, separately from the OAuth code the callback below gets.
     let waSessionData = null
     const handleMessage = (event) => {
+      console.log('[ES] message event', { origin: event.origin, data: event.data })
       if (event.origin !== 'https://www.facebook.com') return
       if (event.data?.type === 'WA_EMBEDDED_SIGNUP' && event.data.event === 'FINISH') {
         waSessionData = event.data.data // { phone_number_id, waba_id }
+        console.log('[ES] captured waSessionData', waSessionData)
       }
     }
     window.addEventListener('message', handleMessage)
 
+    console.log('[ES] calling FB.login with config_id', configId)
     window.FB.login((response) => {
+      console.log('[ES] FB.login callback fired', response)
       window.removeEventListener('message', handleMessage)
       const code = response?.authResponse?.code
       if (!code) {
+        console.log('[ES] no code in response, bailing')
         setEmbeddedSignupLoading(false)
         toast('Signup cancelled')
         return
@@ -152,10 +157,13 @@ const SettingsPage = () => {
 
       ;(async () => {
         try {
+          console.log('[ES] exchanging code, waSessionData at this point:', waSessionData)
           const res = await api.post('/whatsapp/embedded-signup', { code })
           const { accessToken, wabas } = res.data.data
+          console.log('[ES] exchange succeeded, wabas:', wabas)
 
           if (waSessionData?.phone_number_id && waSessionData?.waba_id) {
+            console.log('[ES] auto-connecting with waSessionData')
             await api.post('/whatsapp/embedded-signup/connect', {
               accessToken,
               phoneNumberId: waSessionData.phone_number_id,
@@ -174,6 +182,7 @@ const SettingsPage = () => {
             toast.success('Facebook connected! Enter your WhatsApp Business details below.')
           }
         } catch (err) {
+          console.error('[ES] error during exchange/connect', err)
           toast.error(err.response?.data?.message || 'Signup failed')
         }
         setEmbeddedSignupLoading(false)
