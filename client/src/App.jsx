@@ -74,7 +74,7 @@ function App() {
 
   useEffect(() => {
     if (accessToken) {
-      connect(accessToken)
+      connect()
     } else {
       disconnect()
     }
