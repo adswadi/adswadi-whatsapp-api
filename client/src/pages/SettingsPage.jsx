@@ -55,6 +55,48 @@ const SettingsPage = () => {
     }
   }, [])
 
+  // The Facebook OAuth redirect often opens as a full new tab, which Chrome
+  // backgrounds and throttles/discards — a setInterval poll started before
+  // navigating away can die before the code ever comes back. Checking on
+  // mount and whenever this tab regains focus survives that.
+  const checkStoredOauthCode = useCallback(async () => {
+    const stored = localStorage.getItem('fb_oauth_code')
+    if (!stored) return
+    localStorage.removeItem('fb_oauth_code')
+    let code
+    try {
+      ({ code } = JSON.parse(stored))
+    } catch (_) { return }
+    if (!code) return
+
+    setEmbeddedSignupLoading(true)
+    try {
+      const res = await api.post('/whatsapp/embedded-signup', { code })
+      const { accessToken, wabas } = res.data.data
+      if (wabas && wabas.length > 0) {
+        setEmbeddedData({ accessToken, wabas, manualEntry: false })
+        toast.success('Facebook connected! Select your WhatsApp number below.')
+      } else {
+        setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
+        toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Signup failed')
+    }
+    setEmbeddedSignupLoading(false)
+  }, [])
+
+  useEffect(() => {
+    checkStoredOauthCode()
+    const onFocus = () => checkStoredOauthCode()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [checkStoredOauthCode])
+
   useEffect(() => {
     if (user) {
       setProfile({ name: user.name || '', organizationName: user.organizationName || '', timezone: user.settings?.timezone || 'Asia/Kolkata' })
