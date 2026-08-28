@@ -126,7 +126,7 @@ const SettingsPage = () => {
     const appId = import.meta.env.VITE_META_APP_ID || '1271603524954079'
     const configId = import.meta.env.VITE_META_CONFIG_ID || '919429627305295'
     const redirectUri = encodeURIComponent(`${window.location.origin}/`)
-    const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: '', sessionInfoVersion: '3' }))
+    const extras = encodeURIComponent(JSON.stringify({ feature: 'whatsapp_embedded_signup', setup: {}, featureType: '', sessionInfoVersion: '3' }))
     const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true&extras=${extras}`
 
     const popup = window.open(fbUrl, 'fb-signup', 'width=720,height=800,scrollbars=yes,resizable=yes')
