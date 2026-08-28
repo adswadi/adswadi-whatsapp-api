@@ -36,24 +36,49 @@ const SettingsPage = () => {
   const [embeddedData, setEmbeddedData] = useState(null) // { accessToken, businesses }
   const [selectedPhone, setSelectedPhone] = useState(null)
 
-  useEffect(() => {
-    // Load Facebook SDK
-    if (!window.FB) {
-      window.fbAsyncInit = function () {
-        window.FB.init({
-          appId: import.meta.env.VITE_META_APP_ID || '1271603524954079',
-          autoLogAppEvents: true,
-          xfbml: true,
-          version: 'v21.0',
-        })
+  // Resilience for when the Facebook popup opened as a full tab: Chrome can
+  // throttle or discard a backgrounded tab's timers, so the poll inside
+  // launchEmbeddedSignup may never fire. Checking on mount and on focus
+  // catches the code even if that original poll died.
+  const checkStoredOauthCode = useCallback(async () => {
+    const stored = localStorage.getItem('fb_oauth_code')
+    if (!stored) return
+    localStorage.removeItem('fb_oauth_code')
+    let code
+    try {
+      ({ code } = JSON.parse(stored))
+    } catch (_) { return }
+    if (!code) return
+
+    console.log('[ES] found stored code on mount/focus, exchanging')
+    setEmbeddedSignupLoading(true)
+    try {
+      const res = await api.post('/whatsapp/embedded-signup', { code })
+      const { accessToken, wabas } = res.data.data
+      if (wabas && wabas.length > 0) {
+        setEmbeddedData({ accessToken, wabas, manualEntry: false })
+        toast.success('Facebook connected! Select your WhatsApp number below.')
+      } else {
+        setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
+        toast.success('Facebook connected! Enter your WhatsApp Business details below.')
       }
-      const script = document.createElement('script')
-      script.src = 'https://connect.facebook.net/en_US/sdk.js'
-      script.async = true
-      script.defer = true
-      document.body.appendChild(script)
+    } catch (err) {
+      console.error('[ES] error exchanging stored code', err)
+      toast.error(err.response?.data?.message || 'Signup failed')
     }
+    setEmbeddedSignupLoading(false)
   }, [])
+
+  useEffect(() => {
+    checkStoredOauthCode()
+    const onFocus = () => checkStoredOauthCode()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [checkStoredOauthCode])
 
   useEffect(() => {
     if (user) {
@@ -123,80 +148,105 @@ const SettingsPage = () => {
   }
 
   const launchEmbeddedSignup = useCallback(() => {
-    if (!window.FB) {
-      toast.error('Facebook SDK is still loading, please try again in a moment')
+    const appId = import.meta.env.VITE_META_APP_ID || '1271603524954079'
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '1744062660144243'
+    const redirectUri = encodeURIComponent(`${window.location.origin}/`)
+    const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: '', sessionInfoVersion: '3' }))
+    const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true&extras=${extras}`
+
+    localStorage.removeItem('fb_oauth_code')
+
+    const popup = window.open(fbUrl, 'fb-signup', 'width=720,height=800,scrollbars=yes,resizable=yes')
+    if (!popup) {
+      toast.error('Popup blocked! Allow popups for this site and try again.')
       return
     }
-    const configId = import.meta.env.VITE_META_CONFIG_ID || '1744062660144243'
     setEmbeddedSignupLoading(true)
+    console.log('[ES] popup opened with config_id', configId)
 
-    // Meta sends the chosen WABA + phone number here while the FB.login
-    // popup is still open, separately from the OAuth code the callback below gets.
     let waSessionData = null
+    let done = false
+
+    const cleanup = () => {
+      window.removeEventListener('message', handleMessage)
+      clearInterval(pollInterval)
+    }
+
+    const finish = async (code) => {
+      if (done) return
+      done = true
+      cleanup()
+      console.log('[ES] exchanging code, waSessionData:', waSessionData)
+      try {
+        const res = await api.post('/whatsapp/embedded-signup', { code })
+        const { accessToken, wabas } = res.data.data
+        console.log('[ES] exchange succeeded, wabas:', wabas)
+
+        if (waSessionData?.phone_number_id && waSessionData?.waba_id) {
+          await api.post('/whatsapp/embedded-signup/connect', {
+            accessToken,
+            phoneNumberId: waSessionData.phone_number_id,
+            wabaId: waSessionData.waba_id,
+            displayName: 'WhatsApp Business',
+            phoneNumber: '',
+          })
+          toast.success('🎉 WhatsApp number connected successfully!')
+          setEmbeddedData(null)
+          fetchWaAccounts()
+        } else if (wabas && wabas.length > 0) {
+          setEmbeddedData({ accessToken, wabas, manualEntry: false })
+          toast.success('Facebook connected! Select your WhatsApp number below.')
+        } else {
+          setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
+          toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+        }
+      } catch (err) {
+        console.error('[ES] error during exchange/connect', err)
+        toast.error(err.response?.data?.message || 'Signup failed')
+      }
+      setEmbeddedSignupLoading(false)
+    }
+
     const handleMessage = (event) => {
       console.log('[ES] message event', { origin: event.origin, data: event.data })
-      if (event.origin !== 'https://www.facebook.com') return
-      if (event.data?.type === 'WA_EMBEDDED_SIGNUP' && event.data.event === 'FINISH') {
-        waSessionData = event.data.data // { phone_number_id, waba_id }
-        console.log('[ES] captured waSessionData', waSessionData)
+      if (event.origin === 'https://www.facebook.com' && event.data?.type === 'WA_EMBEDDED_SIGNUP') {
+        if (event.data.event === 'FINISH') {
+          waSessionData = event.data.data
+          console.log('[ES] captured waSessionData', waSessionData)
+        } else if (event.data.event === 'CANCEL') {
+          done = true
+          cleanup()
+          setEmbeddedSignupLoading(false)
+          toast('Signup cancelled')
+        } else if (event.data.event === 'ERROR') {
+          done = true
+          cleanup()
+          setEmbeddedSignupLoading(false)
+          toast.error('WhatsApp signup error: ' + (event.data.data?.error_message || 'Unknown error'))
+        }
+        return
+      }
+      if (event.origin === window.location.origin && event.data?.type === 'FB_OAUTH_CODE') {
+        finish(event.data.code)
       }
     }
     window.addEventListener('message', handleMessage)
 
-    console.log('[ES] calling FB.login with config_id', configId)
-    window.FB.login((response) => {
-      console.log('[ES] FB.login callback fired', response)
-      window.removeEventListener('message', handleMessage)
-      const code = response?.authResponse?.code
-      if (!code) {
-        console.log('[ES] no code in response, bailing')
-        setEmbeddedSignupLoading(false)
-        toast('Signup cancelled')
-        return
-      }
-
-      ;(async () => {
+    const pollInterval = setInterval(() => {
+      const stored = localStorage.getItem('fb_oauth_code')
+      if (stored) {
+        localStorage.removeItem('fb_oauth_code')
         try {
-          console.log('[ES] exchanging code, waSessionData at this point:', waSessionData)
-          const res = await api.post('/whatsapp/embedded-signup', { code })
-          const { accessToken, wabas } = res.data.data
-          console.log('[ES] exchange succeeded, wabas:', wabas)
-
-          if (waSessionData?.phone_number_id && waSessionData?.waba_id) {
-            console.log('[ES] auto-connecting with waSessionData')
-            await api.post('/whatsapp/embedded-signup/connect', {
-              accessToken,
-              phoneNumberId: waSessionData.phone_number_id,
-              wabaId: waSessionData.waba_id,
-              displayName: 'WhatsApp Business',
-              phoneNumber: '',
-            })
-            toast.success('🎉 WhatsApp number connected successfully!')
-            setEmbeddedData(null)
-            fetchWaAccounts()
-          } else if (wabas && wabas.length > 0) {
-            setEmbeddedData({ accessToken, wabas, manualEntry: false })
-            toast.success('Facebook connected! Select your WhatsApp number below.')
-          } else {
-            setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
-            toast.success('Facebook connected! Enter your WhatsApp Business details below.')
-          }
-        } catch (err) {
-          console.error('[ES] error during exchange/connect', err)
-          toast.error(err.response?.data?.message || 'Signup failed')
-        }
+          const { code } = JSON.parse(stored)
+          if (code) finish(code)
+        } catch (_) {}
+      }
+      if (popup.closed && !done) {
+        console.log('[ES] popup closed with no code received')
+        cleanup()
         setEmbeddedSignupLoading(false)
-      })()
-    }, {
-      config_id: configId,
-      response_type: 'code',
-      override_default_response_type: true,
-      extras: {
-        setup: {},
-        featureType: '',
-        sessionInfoVersion: '3',
-      },
-    })
+      }
+    }, 1000)
   }, [fetchWaAccounts])
 
   const connectEmbeddedPhone = async (phone, waba, accessToken) => {
