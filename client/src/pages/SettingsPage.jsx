@@ -50,7 +50,6 @@ const SettingsPage = () => {
     } catch (_) { return }
     if (!code) return
 
-    console.log('[ES] found stored code on mount/focus, exchanging')
     setEmbeddedSignupLoading(true)
     try {
       const res = await api.post('/whatsapp/embedded-signup', { code })
@@ -63,7 +62,6 @@ const SettingsPage = () => {
         toast.success('Facebook connected! Enter your WhatsApp Business details below.')
       }
     } catch (err) {
-      console.error('[ES] error exchanging stored code', err)
       toast.error(err.response?.data?.message || 'Signup failed')
     }
     setEmbeddedSignupLoading(false)
@@ -162,7 +160,6 @@ const SettingsPage = () => {
       return
     }
     setEmbeddedSignupLoading(true)
-    console.log('[ES] popup opened with config_id', configId)
 
     let waSessionData = null
     let done = false
@@ -176,11 +173,9 @@ const SettingsPage = () => {
       if (done) return
       done = true
       cleanup()
-      console.log('[ES] exchanging code, waSessionData:', waSessionData)
       try {
         const res = await api.post('/whatsapp/embedded-signup', { code })
         const { accessToken, wabas } = res.data.data
-        console.log('[ES] exchange succeeded, wabas:', wabas)
 
         if (waSessionData?.phone_number_id && waSessionData?.waba_id) {
           await api.post('/whatsapp/embedded-signup/connect', {
@@ -201,18 +196,15 @@ const SettingsPage = () => {
           toast.success('Facebook connected! Enter your WhatsApp Business details below.')
         }
       } catch (err) {
-        console.error('[ES] error during exchange/connect', err)
         toast.error(err.response?.data?.message || 'Signup failed')
       }
       setEmbeddedSignupLoading(false)
     }
 
     const handleMessage = (event) => {
-      console.log('[ES] message event', { origin: event.origin, data: event.data })
       if (event.origin === 'https://www.facebook.com' && event.data?.type === 'WA_EMBEDDED_SIGNUP') {
         if (event.data.event === 'FINISH') {
           waSessionData = event.data.data
-          console.log('[ES] captured waSessionData', waSessionData)
         } else if (event.data.event === 'CANCEL') {
           done = true
           cleanup()
@@ -242,7 +234,6 @@ const SettingsPage = () => {
         } catch (_) {}
       }
       if (popup.closed && !done) {
-        console.log('[ES] popup closed with no code received')
         cleanup()
         setEmbeddedSignupLoading(false)
       }
