@@ -129,6 +129,9 @@ const SettingsPage = () => {
     const extras = encodeURIComponent(JSON.stringify({ feature: 'whatsapp_embedded_signup', setup: {}, featureType: '', sessionInfoVersion: '3' }))
     const fbUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&display=popup&response_type=code&redirect_uri=${redirectUri}&config_id=${configId}&override_default_response_type=true&extras=${extras}`
 
+    // Clear any stale code from a previous attempt before we start
+    localStorage.removeItem('fb_oauth_code')
+
     const popup = window.open(fbUrl, 'fb-signup', 'width=720,height=800,scrollbars=yes,resizable=yes')
     if (!popup) {
       toast.error('Popup blocked! Click the address bar icon to allow popups for adswadi.in')
@@ -171,6 +174,33 @@ const SettingsPage = () => {
       setEmbeddedSignupLoading(false)
     }
 
+    const processOauthCode = async (code) => {
+      oauthCode = code
+      if (waSessionData) {
+        // Auto-connect: we have both session data + code
+        tryAutoConnect(pollInterval)
+      } else {
+        // No session data yet — exchange code and try auto-fetch WABA
+        window.removeEventListener('message', handleMessage)
+        try {
+          const res = await api.post('/whatsapp/embedded-signup', { code: oauthCode })
+          const { accessToken, wabas } = res.data.data
+          if (wabas && wabas.length > 0) {
+            setEmbeddedData({ accessToken, wabas, manualEntry: false })
+            toast.success('Facebook connected! Select your WhatsApp number below.')
+          } else {
+            setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
+            toast.success('Facebook connected! Enter your WhatsApp Business details below.')
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Signup failed')
+        }
+        done = true
+        cleanup(pollInterval)
+        setEmbeddedSignupLoading(false)
+      }
+    }
+
     const handleMessage = async (event) => {
       // 1. Listen for Meta's WhatsApp Embedded Signup session data (from facebook.com)
       if (event.origin === 'https://www.facebook.com') {
@@ -192,35 +222,26 @@ const SettingsPage = () => {
       }
 
       // 2. Listen for OAuth code from our redirect page (LandingPage posts FB_OAUTH_CODE)
-      if (event.origin === window.location.origin && event.data?.type === 'FB_OAUTH_CODE') {
-        oauthCode = event.data.code
-        if (waSessionData) {
-          // Auto-connect: we have both session data + code
-          tryAutoConnect(pollInterval)
-        } else {
-          // No session data yet — exchange code and try auto-fetch WABA
-          window.removeEventListener('message', handleMessage)
-          try {
-            const res = await api.post('/whatsapp/embedded-signup', { code: oauthCode })
-            const { accessToken, wabas } = res.data.data
-            if (wabas && wabas.length > 0) {
-              setEmbeddedData({ accessToken, wabas, manualEntry: false })
-              toast.success('Facebook connected! Select your WhatsApp number below.')
-            } else {
-              setEmbeddedData({ accessToken, wabas: [], manualEntry: true })
-              toast.success('Facebook connected! Enter your WhatsApp Business details below.')
-            }
-          } catch (err) {
-            toast.error(err.response?.data?.message || 'Signup failed')
-          }
-          setEmbeddedSignupLoading(false)
-        }
+      if (event.origin === window.location.origin && event.data?.type === 'FB_OAUTH_CODE' && !oauthCode) {
+        processOauthCode(event.data.code)
       }
     }
 
     window.addEventListener('message', handleMessage)
     let pollInterval
     pollInterval = setInterval(() => {
+      // Fallback path: Facebook's OAuth page severs window.opener on some
+      // browsers, so also check the localStorage relay LandingPage writes to.
+      if (!oauthCode) {
+        const stored = localStorage.getItem('fb_oauth_code')
+        if (stored) {
+          localStorage.removeItem('fb_oauth_code')
+          try {
+            const { code } = JSON.parse(stored)
+            if (code) processOauthCode(code)
+          } catch (_) {}
+        }
+      }
       if (popup.closed && !done) {
         cleanup(pollInterval)
         setEmbeddedSignupLoading(false)

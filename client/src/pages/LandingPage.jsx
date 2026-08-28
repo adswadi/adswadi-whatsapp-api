@@ -471,9 +471,17 @@ export default function LandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code')
-    if (code && window.opener) {
-      window.opener.postMessage({ type: 'FB_OAUTH_CODE', code }, window.location.origin)
+    if (!code) return
+
+    // Facebook's OAuth page severs window.opener on redirect back, so relay
+    // via localStorage as the reliable path; postMessage is a fast-path bonus.
+    localStorage.setItem('fb_oauth_code', JSON.stringify({ code, ts: Date.now() }))
+
+    if (window.opener) {
+      try { window.opener.postMessage({ type: 'FB_OAUTH_CODE', code }, window.location.origin) } catch (_) {}
       window.close()
+    } else {
+      window.location.replace('/settings')
     }
   }, [])
 
