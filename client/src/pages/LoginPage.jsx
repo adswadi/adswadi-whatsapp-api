@@ -130,7 +130,7 @@ const LoginPage = () => {
                   <input type="checkbox" className="rounded border-gray-300 text-brand-purple" />
                   Remember me
                 </label>
-                <a href="#" className="text-sm font-semibold text-brand-purple hover:underline">Forgot password?</a>
+                <Link to="/forgot-password" className="text-sm font-semibold text-brand-purple hover:underline">Forgot password?</Link>
               </div>
 
               <Button

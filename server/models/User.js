@@ -33,6 +33,8 @@ const userSchema = new mongoose.Schema(
     refreshToken: { type: String, default: null },
     inviteToken: { type: String, default: null },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -53,6 +55,7 @@ userSchema.methods.toJSON = function () {
   delete obj.password;
   delete obj.refreshToken;
   delete obj.inviteToken;
+  delete obj.resetPasswordToken;
   return obj;
 };
 

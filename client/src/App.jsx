@@ -16,6 +16,8 @@ import RefundPage from '@/pages/RefundPage'
 import CareersPage from '@/pages/CareersPage'
 import PartnerPage from '@/pages/PartnerPage'
 import LoginPage from '@/pages/LoginPage'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import RegisterPage from '@/pages/RegisterPage'
 import OnboardingPage from '@/pages/OnboardingPage'
 import DashboardPage from '@/pages/DashboardPage'
@@ -112,6 +114,8 @@ function App() {
         <Route path="/partner-program" element={<PartnerPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
         <Route path="/onboarding" element={<OnboardingPage />} />
 
         {/* Protected app routes */}

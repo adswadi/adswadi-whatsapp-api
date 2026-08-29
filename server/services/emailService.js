@@ -83,4 +83,31 @@ const sendWelcomeEmail = async (email, name) => {
   }); } catch (_) {}
 };
 
-module.exports = { sendEmail, sendInviteEmail, sendWelcomeEmail };
+const sendPasswordResetEmail = async (email, name, resetUrl) => {
+  await sendEmail({
+    to: email,
+    subject: 'Reset your Adswadi password',
+    html: `
+      <div style="font-family: 'DM Sans', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(90deg, #7B2FBE, #4A6CF7, #E91E8C); padding: 3px; border-radius: 12px;">
+          <div style="background: white; border-radius: 10px; padding: 40px;">
+            <h1 style="color: #7B2FBE; font-size: 24px; margin-bottom: 8px;">Reset your password</h1>
+            <p style="color: #444; font-size: 16px; margin-bottom: 24px;">
+              Hi ${name}, we received a request to reset your Adswadi password. Click below to set a new one.
+            </p>
+            <a href="${resetUrl}"
+               style="display: inline-block; background: linear-gradient(90deg, #7B2FBE, #4A6CF7); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+              Reset Password
+            </a>
+            <p style="color: #888; font-size: 13px; margin-top: 32px;">
+              This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+    text: `Reset your password: ${resetUrl} (expires in 1 hour)`,
+  });
+};
+
+module.exports = { sendEmail, sendInviteEmail, sendWelcomeEmail, sendPasswordResetEmail };

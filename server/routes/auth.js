@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
-const { sendWelcomeEmail, sendInviteEmail } = require('../services/emailService');
+const { sendWelcomeEmail, sendInviteEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -78,6 +78,62 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     return error(res, 'Login failed', 500);
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return error(res, 'Email is required', 400);
+
+    const user = await User.findOne({ email });
+    // Always respond the same way whether or not the email exists, so this
+    // endpoint can't be used to check which emails are registered.
+    if (!user) return success(res, {}, 'If that email is registered, a reset link has been sent');
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await User.findByIdAndUpdate(user._id, {
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    const resetUrl = `${process.env.CLIENT_URL || 'https://app.adswadi.com'}/reset-password?token=${rawToken}`;
+    sendPasswordResetEmail(email, user.name, resetUrl).catch(() => {});
+
+    return success(res, {}, 'If that email is registered, a reset link has been sent');
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    return error(res, 'Failed to process request', 500);
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return error(res, 'Token and new password are required', 400);
+    if (password.length < 6) return error(res, 'Password must be at least 6 characters', 400);
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+    if (!user) return error(res, 'Invalid or expired reset link', 400);
+
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    user.refreshToken = null; // force re-login everywhere
+    await user.save();
+
+    return success(res, {}, 'Password reset successfully. Please log in.');
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return error(res, 'Failed to reset password', 500);
   }
 });
 
