@@ -94,6 +94,78 @@ router.get('/invoices', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/billing/invoices/:id/download
+router.get('/invoices/:id/download', authenticate, async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!invoice) return error(res, 'Invoice not found', 404);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${invoice.invoiceNumber}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; max-width: 640px; margin: 40px auto; padding: 0 20px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #7B2FBE; padding-bottom: 20px; margin-bottom: 30px; }
+          .brand { font-size: 22px; font-weight: 800; background: linear-gradient(90deg, #7B2FBE, #4A6CF7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+          .meta { text-align: right; font-size: 13px; color: #666; }
+          .status { display: inline-block; background: #22c55e; color: white; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-top: 6px; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th { text-align: left; font-size: 12px; text-transform: uppercase; color: #888; border-bottom: 1px solid #eee; padding: 8px 0; }
+          td { padding: 12px 0; border-bottom: 1px solid #f3f3f3; font-size: 14px; }
+          .totals { margin-left: auto; width: 260px; }
+          .totals div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+          .totals .grand { font-weight: 800; font-size: 17px; border-top: 2px solid #1a1a1a; padding-top: 10px; margin-top: 6px; }
+          .footer { margin-top: 40px; font-size: 12px; color: #999; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">Adswadi WhatsApp API</div>
+            <p style="font-size: 13px; color: #666; margin-top: 4px;">Adswadi<br>adswadiofficial@gmail.com</p>
+          </div>
+          <div class="meta">
+            <div><strong>${invoice.invoiceNumber}</strong></div>
+            <div>${new Date(invoice.paidAt || invoice.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            <div class="status">${invoice.status.toUpperCase()}</div>
+          </div>
+        </div>
+
+        <p style="font-size: 13px; color: #666;">Billed to</p>
+        <p style="font-size: 15px; font-weight: 600;">${invoice.billingAddress?.name || req.user.name}<br>${invoice.billingAddress?.email || req.user.email}</p>
+
+        <table>
+          <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>
+            ${(invoice.items || []).map((item) => `
+              <tr><td>${item.description}</td><td style="text-align:right">₹${item.total.toLocaleString('en-IN')}</td></tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div><span>Subtotal</span><span>₹${invoice.amount.toLocaleString('en-IN')}</span></div>
+          <div><span>GST (18%)</span><span>₹${invoice.tax.toLocaleString('en-IN')}</span></div>
+          <div class="grand"><span>Total</span><span>₹${invoice.totalAmount.toLocaleString('en-IN')}</span></div>
+        </div>
+
+        <div class="footer">This is a computer-generated invoice from Adswadi WhatsApp API.</div>
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.html"`);
+    return res.send(html);
+  } catch (err) {
+    console.error('Invoice download error:', err);
+    return error(res, 'Failed to generate invoice', 500);
+  }
+});
+
 // POST /api/billing/create-order
 router.post('/create-order', authenticate, async (req, res) => {
   try {

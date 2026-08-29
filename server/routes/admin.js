@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Subscription = require('../models/Subscription');
+const Invoice = require('../models/Invoice');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
 
@@ -55,12 +56,13 @@ router.post('/users/:id/renew', authenticate, requirePlatformAdmin, async (req, 
     const endDate = new Date(start);
     endDate.setDate(endDate.getDate() + 30);
 
+    let subscription;
     if (existing) {
       existing.endDate = endDate;
       existing.nextBillingDate = endDate;
-      await existing.save();
+      subscription = await existing.save();
     } else {
-      await Subscription.create({
+      subscription = await Subscription.create({
         userId: user._id,
         planId: null,
         planName: 'starter',
@@ -75,6 +77,23 @@ router.post('/users/:id/renew', authenticate, requirePlatformAdmin, async (req, 
     }
 
     await User.findByIdAndUpdate(user._id, { plan: 'starter' });
+
+    const amount = 999;
+    const tax = Math.round(amount * 0.18);
+    await Invoice.create({
+      userId: user._id,
+      subscriptionId: subscription._id,
+      amount,
+      tax,
+      totalAmount: amount + tax,
+      currency: 'INR',
+      status: 'paid',
+      planName: 'starter',
+      billingCycle: 'monthly',
+      paidAt: now,
+      billingAddress: { name: user.name, email: user.email },
+      items: [{ description: 'Starter plan — 30 day renewal', quantity: 1, unitPrice: amount, total: amount }],
+    });
 
     return success(res, { endDate }, 'Subscription renewed for 30 days');
   } catch (err) {

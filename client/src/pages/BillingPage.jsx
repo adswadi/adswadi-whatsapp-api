@@ -94,6 +94,22 @@ const BillingPage = () => {
     }
   }
 
+  const handleDownloadInvoice = async (invoiceId, invoiceNumber) => {
+    try {
+      const res = await api.get(`/billing/invoices/${invoiceId}/download`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${invoiceNumber}.html`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast.error('Failed to download invoice')
+    }
+  }
+
   const PLAN_COLORS = {
     free: 'border-gray-200',
     starter: 'border-brand-blue',
@@ -251,7 +267,10 @@ const BillingPage = () => {
                       </Badge>
                     </div>
                     {inv.status === 'paid' && (
-                      <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors">
+                      <button
+                        onClick={() => handleDownloadInvoice(inv._id, inv.invoiceNumber)}
+                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors"
+                      >
                         <Download size={15} />
                       </button>
                     )}
