@@ -1,5 +1,6 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import useSubscriptionStore from '@/store/subscriptionStore'
 
 const api = axios.create({
   baseURL: '/api',
@@ -26,6 +27,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+
+    if (error.response?.status === 402 && error.response?.data?.code === 'SUBSCRIPTION_EXPIRED') {
+      useSubscriptionStore.getState().showExpiredModal(error.response.data.message)
+      return Promise.reject(error)
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true

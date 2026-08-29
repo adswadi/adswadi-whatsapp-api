@@ -6,6 +6,7 @@ import useAuthStore from '@/store/authStore'
 import useSocketStore from '@/store/socketStore'
 
 import AppLayout from '@/components/layout/AppLayout'
+import SubscriptionExpiredModal from '@/components/SubscriptionExpiredModal'
 
 import LandingPage from '@/pages/LandingPage'
 import AboutPage from '@/pages/AboutPage'
@@ -26,6 +27,7 @@ import TemplatesPage from '@/pages/TemplatesPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import BillingPage from '@/pages/BillingPage'
 import SettingsPage from '@/pages/SettingsPage'
+import AdminPage from '@/pages/AdminPage'
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, user, isInitialized } = useAuthStore()
@@ -98,6 +100,7 @@ function App() {
           },
         }}
       />
+      <SubscriptionExpiredModal />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
@@ -122,6 +125,7 @@ function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
 
         {/* Fallback */}

@@ -19,6 +19,7 @@ const analyticsRoutes = require('./routes/analytics');
 const teamRoutes = require('./routes/team');
 const settingsRoutes = require('./routes/settings');
 const webhookRoutes = require('./routes/webhook');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const server = http.createServer(app);
@@ -121,6 +122,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve React frontend in production
 const path = require('path');

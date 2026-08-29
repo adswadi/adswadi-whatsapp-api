@@ -17,7 +17,7 @@ const navItems = [
   { icon: BarChart2, label: 'Analytics', path: '/analytics' },
 ]
 
-const bottomItems = [
+const baseBottomItems = [
   { icon: CreditCard, label: 'Billing', path: '/billing' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ]
@@ -32,6 +32,9 @@ const PLAN_COLORS = {
 const Sidebar = ({ collapsed = false }) => {
   const { user, logout } = useAuthStore()
   const location = useLocation()
+  const bottomItems = user?.isPlatformAdmin
+    ? [{ icon: Shield, label: 'Admin', path: '/admin' }, ...baseBottomItems]
+    : baseBottomItems
 
   return (
     <div

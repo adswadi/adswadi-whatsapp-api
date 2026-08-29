@@ -3,6 +3,7 @@ const router = express.Router();
 const Broadcast = require('../models/Broadcast');
 const { authenticate } = require('../middleware/auth');
 const { checkBroadcastLimit } = require('../middleware/planLimits');
+const { requireActiveSubscription } = require('../middleware/subscription');
 const { success, error, paginated } = require('../utils/responseHelper');
 const { addBroadcastJob, broadcastQueue } = require('../workers/broadcastWorker');
 
@@ -95,7 +96,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // POST /api/broadcasts/:id/send
-router.post('/:id/send', authenticate, async (req, res) => {
+router.post('/:id/send', authenticate, requireActiveSubscription, async (req, res) => {
   try {
     const broadcast = await Broadcast.findOne({ _id: req.params.id, userId: req.user._id });
     if (!broadcast) return error(res, 'Broadcast not found', 404);

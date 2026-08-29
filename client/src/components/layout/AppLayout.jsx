@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopNav from './TopNav'
+import TrialBanner from './TrialBanner'
 import { cn } from '@/lib/utils'
 
 const PAGE_TITLES = {
@@ -53,6 +54,7 @@ const AppLayout = () => {
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
           title={title}
         />
+        <TrialBanner />
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>

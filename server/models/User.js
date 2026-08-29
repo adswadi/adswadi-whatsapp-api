@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema(
     teamMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     onboardingCompleted: { type: Boolean, default: false },
     onboardingStep: { type: Number, default: 0 },
+    trialEndsAt: { type: Date, default: null },
+    isPlatformAdmin: { type: Boolean, default: false },
     settings: {
       notifications: {
         email: { type: Boolean, default: true },

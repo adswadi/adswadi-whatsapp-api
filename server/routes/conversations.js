@@ -6,6 +6,7 @@ const Contact = require('../models/Contact');
 const WhatsAppAccount = require('../models/WhatsAppAccount');
 const whatsappService = require('../services/whatsappService');
 const { authenticate } = require('../middleware/auth');
+const { requireActiveSubscription } = require('../middleware/subscription');
 const { success, error, paginated } = require('../utils/responseHelper');
 
 // GET /api/conversations
@@ -103,7 +104,7 @@ router.get('/:id/messages', authenticate, async (req, res) => {
 });
 
 // POST /api/conversations/:id/messages
-router.post('/:id/messages', authenticate, async (req, res) => {
+router.post('/:id/messages', authenticate, requireActiveSubscription, async (req, res) => {
   try {
     const { type = 'text', text, mediaUrl, templateName, templateLanguage, components } = req.body;
 

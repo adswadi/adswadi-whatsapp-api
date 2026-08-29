@@ -29,7 +29,8 @@ router.post('/register', async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return error(res, 'Email already registered', 409);
 
-    const user = await User.create({ name, email, password, organizationName: organizationName || name + "'s Team" });
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const user = await User.create({ name, email, password, organizationName: organizationName || name + "'s Team", trialEndsAt });
 
     const { accessToken, refreshToken } = generateTokens(user._id);
 
@@ -57,6 +58,16 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return error(res, 'Invalid credentials', 401);
 
     if (!user.isActive) return error(res, 'Account deactivated', 403);
+
+    // Accounts created before the trial system existed have no trialEndsAt —
+    // give them a one-time grace window instead of locking them out immediately.
+    if (!user.trialEndsAt && !user.organizationId) {
+      user.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
+    const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS || 'adswadiofficial@gmail.com').split(',').map((e) => e.trim().toLowerCase());
+    if (!user.isPlatformAdmin && adminEmails.includes(user.email.toLowerCase())) {
+      user.isPlatformAdmin = true;
+    }
 
     const { accessToken, refreshToken } = generateTokens(user._id);
     user.refreshToken = refreshToken;

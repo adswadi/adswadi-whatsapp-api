@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const WhatsAppAccount = require('../models/WhatsAppAccount');
 const { authenticate } = require('../middleware/auth');
+const { requireActiveSubscription } = require('../middleware/subscription');
 const { encrypt } = require('../utils/encryption');
 const { success, error } = require('../utils/responseHelper');
 const whatsappService = require('../services/whatsappService');
@@ -127,7 +128,7 @@ router.get('/accounts/:id/templates', authenticate, async (req, res) => {
 });
 
 // POST /api/whatsapp/send
-router.post('/send', authenticate, async (req, res) => {
+router.post('/send', authenticate, requireActiveSubscription, async (req, res) => {
   try {
     const { accountId, to, type, text, mediaUrl, templateName, templateLanguage, components } = req.body;
 
