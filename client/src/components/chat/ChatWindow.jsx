@@ -106,8 +106,15 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
         type: 'text',
         text: messageText,
       })
-      // Replace temp message with real one
-      setMessages((prev) => prev.map((m) => m._id === tempMsg._id ? res.data.data.message : m))
+      const realMessage = res.data.data.message
+      // The server also echoes this same message back over the socket, which
+      // can arrive before this response does — drop the temp bubble and only
+      // add the real one if the socket handler hasn't already added it.
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((m) => m._id !== tempMsg._id)
+        if (withoutTemp.some((m) => m._id === realMessage._id)) return withoutTemp
+        return [...withoutTemp, realMessage]
+      })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send message')
       setMessages((prev) => prev.filter((m) => m._id !== tempMsg._id))
