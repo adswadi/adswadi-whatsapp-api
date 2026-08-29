@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const subscriptionSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
+    // Optional: manual admin renewals and the current Razorpay flow both
+    // create subscriptions without a real Plan document reference.
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null },
     planName: { type: String, required: true },
     billingCycle: { type: String, enum: ['monthly', 'annual'], default: 'monthly' },
     status: {
