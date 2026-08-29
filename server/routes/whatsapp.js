@@ -5,6 +5,33 @@ const { authenticate } = require('../middleware/auth');
 const { encrypt } = require('../utils/encryption');
 const { success, error } = require('../utils/responseHelper');
 const whatsappService = require('../services/whatsappService');
+const crypto = require('crypto');
+
+// Subscribes our app to the customer's WABA (needed to receive their
+// incoming messages) and registers the phone number for Cloud API
+// messaging. A number that's verified + approved but never registered
+// stays stuck in "Pending" in WhatsApp Manager forever — this is what
+// actually activates it. Both steps are safe to retry: they no-op with
+// an error we swallow if already done.
+const activateWhatsAppNumber = async (wabaId, phoneNumberId, accessToken) => {
+  const axios = require('axios');
+  try {
+    await axios.post(`https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`, null, {
+      params: { access_token: accessToken },
+    });
+  } catch (err) {
+    console.error('WABA subscribe error:', err?.response?.data || err.message);
+  }
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/register`,
+      { messaging_product: 'whatsapp', pin: crypto.randomInt(100000, 999999).toString() },
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+  } catch (err) {
+    console.error('Phone number register error:', err?.response?.data || err.message);
+  }
+};
 
 // GET /api/whatsapp/accounts
 router.get('/accounts', authenticate, async (req, res) => {
@@ -24,6 +51,8 @@ router.post('/accounts', authenticate, async (req, res) => {
     if (!displayName || !phoneNumber || !phoneNumberId || !wabaId || !accessToken) {
       return error(res, 'All fields are required', 400);
     }
+
+    await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
 
     const encryptedToken = encrypt(accessToken);
 
@@ -184,17 +213,7 @@ router.post('/embedded-signup/connect', authenticate, async (req, res) => {
     const { accessToken, phoneNumberId, wabaId, displayName, phoneNumber } = req.body;
     if (!accessToken || !phoneNumberId || !wabaId) return error(res, 'Missing required fields', 400);
 
-    const axios = require('axios');
-
-    // Subscribe our app to this customer's WABA — without this, their incoming
-    // messages never reach our webhook even though our app-level webhook is configured.
-    try {
-      await axios.post(`https://graph.facebook.com/v20.0/${wabaId}/subscribed_apps`, null, {
-        params: { access_token: accessToken },
-      });
-    } catch (subErr) {
-      console.error('WABA subscribe error:', subErr?.response?.data || subErr.message);
-    }
+    await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
 
     const encryptedToken = encrypt(accessToken);
 
