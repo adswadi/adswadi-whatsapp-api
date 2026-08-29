@@ -99,9 +99,7 @@ const OnboardingPage = () => {
       <div className="hidden lg:flex w-80 flex-col p-10 justify-between" style={{ background: '#1A0A2E' }}>
         <div>
           <div className="flex items-center gap-2 mb-12">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}>
-              <Zap size={16} className="text-white" />
-            </div>
+            <img src="/adswadi-logo.png" alt="Adswadi" className="w-8 h-8 object-contain" />
             <span className="text-white font-bold font-jakarta">Adswadi</span>
           </div>
 

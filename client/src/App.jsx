@@ -38,9 +38,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center animate-pulse" style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}>
-            <span className="text-white font-bold text-xl">A</span>
-          </div>
+          <img src="/adswadi-logo.png" alt="Adswadi" className="w-12 h-12 object-contain animate-pulse" />
           <p className="text-gray-500 text-sm">Loading...</p>
         </div>
       </div>

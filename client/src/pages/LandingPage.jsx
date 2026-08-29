@@ -509,11 +509,7 @@ export default function LandingPage() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}>
-              <svg viewBox="0 0 32 32" fill="white" className="w-5 h-5">
-                <path d="M16 2C8.268 2 2 8.268 2 16c0 2.637.693 5.113 1.906 7.25L2 30l6.938-1.875A13.942 13.942 0 0016 30c7.732 0 14-6.268 14-14S23.732 2 16 2zm6.406 19.813c-.35-.175-2.075-1.025-2.394-1.144-.319-.119-.55-.175-.781.175-.231.35-.894 1.144-1.1 1.381-.206.238-.406.263-.756.088-.35-.175-1.475-.544-2.813-1.738-1.038-.925-1.738-2.069-1.944-2.419-.206-.35-.019-.538.156-.713.163-.156.35-.406.525-.613.175-.206.231-.35.35-.581.119-.231.063-.438-.031-.613-.094-.175-.781-1.888-1.075-2.581-.281-.681-.563-.588-.781-.6l-.663-.013c-.231 0-.606.088-.925.438-.319.35-1.206 1.175-1.206 2.869 0 1.694 1.238 3.331 1.413 3.563.175.231 2.438 3.731 5.906 5.231.825.356 1.469.569 1.969.731.825.263 1.578.225 2.175.138.663-.1 2.075-.85 2.369-1.669.294-.819.294-1.519.206-1.669-.088-.15-.319-.238-.663-.413z"/>
-              </svg>
-            </div>
+            <img src="/adswadi-logo.png" alt="Adswadi" className="w-9 h-9 object-contain" />
             <div>
               <span className="font-extrabold text-lg font-jakarta leading-none block" style={{background:'linear-gradient(90deg,#7B2FBE,#4A6CF7,#E91E8C)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Adswadi</span>
               <span className="text-[9px] font-bold tracking-widest block" style={{color:'#7B2FBE'}}>WhatsApp API</span>
@@ -1019,9 +1015,7 @@ export default function LandingPage() {
             {/* Brand col */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}>
-                  <svg viewBox="0 0 32 32" fill="white" className="w-4 h-4"><path d="M16 2C8.268 2 2 8.268 2 16c0 2.637.693 5.113 1.906 7.25L2 30l6.938-1.875A13.942 13.942 0 0016 30c7.732 0 14-6.268 14-14S23.732 2 16 2zm6.406 19.813c-.35-.175-2.075-1.025-2.394-1.144-.319-.119-.55-.175-.781.175-.231.35-.894 1.144-1.1 1.381-.206.238-.406.263-.756.088-.35-.175-1.475-.544-2.813-1.738-1.038-.925-1.738-2.069-1.944-2.419-.206-.35-.019-.538.156-.713.163-.156.35-.406.525-.613.175-.206.231-.35.35-.581.119-.231.063-.438-.031-.613-.094-.175-.781-1.888-1.075-2.581-.281-.681-.563-.588-.781-.6l-.663-.013c-.231 0-.606.088-.925.438-.319.35-1.206 1.175-1.206 2.869 0 1.694 1.238 3.331 1.413 3.563.175.231 2.438 3.731 5.906 5.231.825.356 1.469.569 1.969.731.825.263 1.578.225 2.175.138.663-.1 2.075-.85 2.369-1.669.294-.819.294-1.519.206-1.669-.088-.15-.319-.238-.663-.413z"/></svg>
-                </div>
+                <img src="/adswadi-logo.png" alt="Adswadi" className="w-8 h-8 object-contain" />
                 <div>
                   <span className="font-extrabold text-white text-base font-jakarta block">Adswadi</span>
                   <span className="text-[9px] text-purple-400">WhatsApp API</span>

@@ -56,9 +56,7 @@ const RegisterPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero px-4 py-12">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-2 justify-center mb-8">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}>
-            <Zap size={18} className="text-white" />
-          </div>
+          <img src="/adswadi-logo.png" alt="Adswadi" className="w-9 h-9 object-contain" />
           <span className="font-bold text-gray-900 font-jakarta text-lg">Adswadi WhatsApp API</span>
         </div>
 

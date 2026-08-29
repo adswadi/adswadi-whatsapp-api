@@ -44,12 +44,7 @@ const Sidebar = ({ collapsed = false }) => {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}
-          >
-            <Zap size={18} className="text-white" />
-          </div>
+          <img src="/adswadi-logo.png" alt="Adswadi" className="w-9 h-9 object-contain shrink-0" />
           {!collapsed && (
             <div>
               <p className="font-bold text-white text-sm font-jakarta leading-tight">Adswadi</p>

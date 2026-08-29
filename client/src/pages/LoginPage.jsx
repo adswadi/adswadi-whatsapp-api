@@ -57,9 +57,7 @@ const LoginPage = () => {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}>
-              <Zap size={20} className="text-white" />
-            </div>
+            <img src="/adswadi-logo.png" alt="Adswadi" className="w-10 h-10 object-contain" />
             <span className="text-white font-bold text-xl font-jakarta">Adswadi WhatsApp API</span>
           </div>
 
@@ -87,9 +85,7 @@ const LoginPage = () => {
       <div className="flex items-center justify-center px-6 py-12 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="md:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7B2FBE, #4A6CF7)' }}>
-              <Zap size={16} className="text-white" />
-            </div>
+            <img src="/adswadi-logo.png" alt="Adswadi" className="w-8 h-8 object-contain" />
             <span className="font-bold text-gray-900 font-jakarta">Adswadi WhatsApp API</span>
           </div>
 

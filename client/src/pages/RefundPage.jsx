@@ -11,9 +11,7 @@ const RefundPage = () => (
   <div className="min-h-screen bg-white font-jakarta">
     <nav className="border-b border-gray-100 px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
       <Link to="/" className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}>
-          <svg viewBox="0 0 32 32" fill="white" className="w-4 h-4"><path d="M16 2C8.268 2 2 8.268 2 16c0 2.637.693 5.113 1.906 7.25L2 30l6.938-1.875A13.942 13.942 0 0016 30c7.732 0 14-6.268 14-14S23.732 2 16 2z"/></svg>
-        </div>
+        <img src="/adswadi-logo.png" alt="Adswadi" className="w-8 h-8 object-contain" />
         <span className="font-extrabold text-gray-900 text-base">Adswadi</span>
       </Link>
       <Link to="/" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Back to Home</Link>
