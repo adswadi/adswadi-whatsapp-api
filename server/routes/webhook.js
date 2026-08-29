@@ -24,12 +24,15 @@ router.get('/whatsapp', (req, res) => {
 // POST /api/webhook/whatsapp - Incoming messages
 router.post('/whatsapp', async (req, res) => {
   try {
-    // Verify signature
+    // Verify signature — must be computed against the exact raw bytes Meta
+    // sent, not a re-serialized JSON.stringify(req.body), which almost never
+    // matches byte-for-byte (key order, unicode escaping, etc.) and would
+    // reject every real webhook with a 403.
     const signature = req.headers['x-hub-signature-256'];
     if (signature && process.env.META_APP_SECRET) {
       const expectedSig = 'sha256=' + crypto
         .createHmac('sha256', process.env.META_APP_SECRET)
-        .update(JSON.stringify(req.body))
+        .update(req.rawBody || Buffer.from(JSON.stringify(req.body)))
         .digest('hex');
       if (signature !== expectedSig) {
         return res.status(403).json({ error: 'Invalid signature' });
