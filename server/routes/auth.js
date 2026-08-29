@@ -83,11 +83,16 @@ router.post('/refresh', async (req, res) => {
       return error(res, 'Invalid refresh token', 401);
     }
 
-    const { accessToken, refreshToken: newRefresh } = generateTokens(user._id);
-    user.refreshToken = newRefresh;
-    await user.save();
+    // Don't rotate the refresh token here — the user has several tabs open
+    // at once, and rotating on every refresh invalidates every other tab's
+    // copy the moment one of them refreshes, logging the rest out early.
+    // Just issue a fresh access token; the refresh token still expires and
+    // gets replaced normally on next login.
+    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRES || '15m',
+    });
 
-    return success(res, { accessToken, refreshToken: newRefresh });
+    return success(res, { accessToken, refreshToken });
   } catch (err) {
     return error(res, 'Invalid or expired refresh token', 401);
   }
