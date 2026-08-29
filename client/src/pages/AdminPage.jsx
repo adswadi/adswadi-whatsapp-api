@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Shield, RefreshCw } from 'lucide-react'
+import { Shield, RefreshCw, Users, CheckCircle2, Clock, XCircle, IndianRupee, Search } from 'lucide-react'
 import api from '@/lib/api'
 import useAuthStore from '@/store/authStore'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { formatDate } from '@/lib/utils'
+import Input from '@/components/ui/Input'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const STATUS_BADGE = {
@@ -18,19 +19,32 @@ const STATUS_BADGE = {
 const AdminPage = () => {
   const { user } = useAuthStore()
   const [users, setUsers] = useState([])
+  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [renewingId, setRenewingId] = useState(null)
+  const [search, setSearch] = useState('')
 
   const fetchUsers = async () => {
     setLoading(true)
     try {
       const res = await api.get('/admin/users')
       setUsers(res.data.data.users || [])
+      setStats(res.data.data.stats || null)
     } catch (_) {
       toast.error('Failed to load users')
     }
     setLoading(false)
   }
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return users
+    return users.filter((u) =>
+      u.email?.toLowerCase().includes(q) ||
+      u.name?.toLowerCase().includes(q) ||
+      u.organizationName?.toLowerCase().includes(q)
+    )
+  }, [users, search])
 
   useEffect(() => {
     if (user?.isPlatformAdmin) fetchUsers()
@@ -64,12 +78,41 @@ const AdminPage = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {[
+          { label: 'Total', value: stats?.total ?? '—', icon: Users, color: 'text-gray-500 bg-gray-100' },
+          { label: 'Active', value: stats?.active ?? '—', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+          { label: 'Trial', value: stats?.trial ?? '—', icon: Clock, color: 'text-blue-600 bg-blue-50' },
+          { label: 'Expired', value: stats?.expired ?? '—', icon: XCircle, color: 'text-red-600 bg-red-50' },
+          { label: 'Revenue', value: stats ? formatCurrency(stats.totalRevenue) : '—', icon: IndianRupee, color: 'text-brand-purple bg-brand-purple/10' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${color}`}>
+                <Icon size={16} />
+              </div>
+              <p className="text-lg font-extrabold text-gray-900 font-jakarta">{value}</p>
+              <p className="text-xs text-gray-500">{label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>{users.length} organizations</CardTitle>
-          <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={14} />} onClick={fetchUsers} loading={loading}>
-            Refresh
-          </Button>
+        <CardHeader className="flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <CardTitle>{filteredUsers.length} of {users.length} organizations</CardTitle>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Search by email or name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              leftIcon={<Search size={14} />}
+              className="w-64"
+            />
+            <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={14} />} onClick={fetchUsers} loading={loading}>
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -78,11 +121,13 @@ const AdminPage = () => {
                 <div key={i} className="h-14 bg-gray-100 rounded-xl skeleton" />
               ))}
             </div>
-          ) : users.length === 0 ? (
-            <div className="py-10 text-center text-sm text-gray-400">No organizations yet</div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400">
+              {search ? 'No matching organizations' : 'No organizations yet'}
+            </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const badge = STATUS_BADGE[u.status] || STATUS_BADGE.expired
                 return (
                   <div key={u._id} className="flex items-center justify-between px-6 py-4">

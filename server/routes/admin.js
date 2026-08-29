@@ -37,7 +37,19 @@ router.get('/users', authenticate, requirePlatformAdmin, async (req, res) => {
       };
     }));
 
-    return success(res, { users: usersWithStatus });
+    const stats = {
+      total: usersWithStatus.length,
+      active: usersWithStatus.filter((u) => u.status === 'active').length,
+      trial: usersWithStatus.filter((u) => u.status === 'trial').length,
+      expired: usersWithStatus.filter((u) => u.status === 'expired').length,
+    };
+    const revenueAgg = await Invoice.aggregate([
+      { $match: { status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]);
+    stats.totalRevenue = revenueAgg[0]?.total || 0;
+
+    return success(res, { users: usersWithStatus, stats });
   } catch (err) {
     console.error('Admin users fetch error:', err);
     return error(res, 'Failed to fetch users', 500);
