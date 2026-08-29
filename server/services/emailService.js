@@ -1,35 +1,23 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
-let transporter = null;
-
-const getTransporter = () => {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return transporter;
-};
-
+// Railway blocks outbound SMTP (port 587), which made nodemailer time out on
+// every send. Resend's API runs over plain HTTPS, so it isn't affected.
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const t = getTransporter();
-    const info = await t.sendMail({
-      from: `"Adswadi WhatsApp API" <${process.env.SMTP_USER}>`,
-      to,
-      subject,
-      html,
-      text,
-    });
-    return info;
+    const res = await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from: process.env.RESEND_FROM_EMAIL || 'Adswadi WhatsApp API <onboarding@resend.dev>',
+        to,
+        subject,
+        html,
+        text,
+      },
+      { headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` } }
+    );
+    return res.data;
   } catch (err) {
-    console.error('Email send error:', err.message);
+    console.error('Email send error:', err?.response?.data || err.message);
     throw err;
   }
 };
