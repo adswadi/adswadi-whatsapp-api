@@ -21,6 +21,7 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
   const [hasMore, setHasMore] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  const fileInputRef = useRef(null)
   const { socket } = useSocketStore()
 
   const contact = conversation.contactId
@@ -122,6 +123,50 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
     } finally {
       setSending(false)
     }
+  }
+
+  const sendMediaFile = async (file) => {
+    if (!file || sending) return
+    setSending(true)
+
+    const tempMsg = {
+      _id: `temp_${Date.now()}`,
+      direction: 'outbound',
+      type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'document',
+      content: { mediaUrl: URL.createObjectURL(file), caption: '' },
+      status: 'pending',
+      createdAt: new Date(),
+    }
+    setMessages((prev) => [...prev, tempMsg])
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const uploadRes = await api.post(`/conversations/${conversation._id}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const { url, type } = uploadRes.data.data
+
+      const res = await api.post(`/conversations/${conversation._id}/messages`, { type, mediaUrl: url })
+      const realMessage = res.data.data.message
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((m) => m._id !== tempMsg._id)
+        if (withoutTemp.some((m) => m._id === realMessage._id)) return withoutTemp
+        return [...withoutTemp, realMessage]
+      })
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send file')
+      setMessages((prev) => prev.filter((m) => m._id !== tempMsg._id))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) sendMediaFile(file)
   }
 
   const handleKeyPress = (e) => {
@@ -260,7 +305,19 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
         )}
         <div className="flex items-end gap-3">
           <div className="flex items-center gap-1">
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+            >
               <Paperclip size={18} />
             </button>
             <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">

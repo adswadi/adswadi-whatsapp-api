@@ -7,7 +7,10 @@ const WhatsAppAccount = require('../models/WhatsAppAccount');
 const whatsappService = require('../services/whatsappService');
 const { authenticate } = require('../middleware/auth');
 const { requireActiveSubscription } = require('../middleware/subscription');
+const { upload, handleUpload } = require('../middleware/upload');
 const { success, error, paginated } = require('../utils/responseHelper');
+
+const RESOURCE_TYPE_TO_MESSAGE_TYPE = { image: 'image', video: 'video', audio: 'audio', raw: 'document' };
 
 // GET /api/conversations
 router.get('/', authenticate, async (req, res) => {
@@ -104,6 +107,18 @@ router.get('/:id/messages', authenticate, async (req, res) => {
 });
 
 // POST /api/conversations/:id/messages
+// POST /api/conversations/:id/upload — upload an attachment, returns a URL + WhatsApp message type
+router.post('/:id/upload', authenticate, requireActiveSubscription, upload.single('file'), handleUpload, async (req, res) => {
+  try {
+    if (!req.uploadedFile) return error(res, 'No file uploaded', 400);
+    const type = RESOURCE_TYPE_TO_MESSAGE_TYPE[req.uploadedFile.type] || 'document';
+    return success(res, { url: req.uploadedFile.url, type, fileName: req.file?.originalname });
+  } catch (err) {
+    console.error('Conversation upload error:', err);
+    return error(res, 'Failed to upload file', 500);
+  }
+});
+
 router.post('/:id/messages', authenticate, requireActiveSubscription, async (req, res) => {
   try {
     const { type = 'text', text, mediaUrl, templateName, templateLanguage, components } = req.body;
