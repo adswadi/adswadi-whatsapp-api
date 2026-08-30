@@ -128,7 +128,18 @@ router.post('/:id/messages', authenticate, requireActiveSubscription, async (req
 
     if (!conversation) return error(res, 'Conversation not found', 404);
 
-    const waAccount = conversation.waAccountId;
+    // A conversation is linked to whichever WhatsApp account was active when
+    // it was first created (from the incoming webhook) and never updated
+    // after that — if the user later reconnects/replaces their number, old
+    // conversations keep sending through the stale, no-longer-active
+    // account. Always resolve to whatever's active *now* instead, and heal
+    // the conversation's stored reference so this doesn't need to repeat.
+    let waAccount = conversation.waAccountId;
+    const currentActive = await WhatsAppAccount.findOne({ userId: req.user._id, isActive: true }).sort({ updatedAt: -1 });
+    if (currentActive && String(currentActive._id) !== String(waAccount?._id)) {
+      waAccount = currentActive;
+      await Conversation.findByIdAndUpdate(conversation._id, { waAccountId: currentActive._id });
+    }
     if (!waAccount) return error(res, 'WhatsApp account not found', 404);
 
     let result;

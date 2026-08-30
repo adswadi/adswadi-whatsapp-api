@@ -55,6 +55,12 @@ router.post('/accounts', authenticate, async (req, res) => {
 
     await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
 
+    // Only one connected number drives sending at a time today — nothing in
+    // the UI lets a conversation pick between multiple, so leaving old
+    // accounts marked active left conversations pointing at stale, possibly
+    // unapproved numbers after a reconnect.
+    await WhatsAppAccount.updateMany({ userId: req.user._id, isActive: true }, { isActive: false });
+
     const encryptedToken = encrypt(accessToken);
 
     const account = await WhatsAppAccount.create({
@@ -215,6 +221,7 @@ router.post('/embedded-signup/connect', authenticate, async (req, res) => {
     if (!accessToken || !phoneNumberId || !wabaId) return error(res, 'Missing required fields', 400);
 
     await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
+    await WhatsAppAccount.updateMany({ userId: req.user._id, isActive: true }, { isActive: false });
 
     const encryptedToken = encrypt(accessToken);
 
