@@ -34,6 +34,18 @@ const activateWhatsAppNumber = async (wabaId, phoneNumberId, accessToken) => {
   }
 };
 
+// Only one connected number drives sending at a time today — nothing in the
+// UI lets a conversation pick between multiple, so leaving old accounts
+// marked active left conversations pointing at stale, possibly unapproved
+// numbers after a reconnect. Called only after the new account is safely
+// created, so a failed create never leaves the user with zero active accounts.
+const deactivateOtherAccounts = async (userId, keepAccountId) => {
+  await WhatsAppAccount.updateMany(
+    { userId, isActive: true, _id: { $ne: keepAccountId } },
+    { isActive: false }
+  );
+};
+
 // GET /api/whatsapp/accounts
 router.get('/accounts', authenticate, async (req, res) => {
   try {
@@ -55,12 +67,6 @@ router.post('/accounts', authenticate, async (req, res) => {
 
     await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
 
-    // Only one connected number drives sending at a time today — nothing in
-    // the UI lets a conversation pick between multiple, so leaving old
-    // accounts marked active left conversations pointing at stale, possibly
-    // unapproved numbers after a reconnect.
-    await WhatsAppAccount.updateMany({ userId: req.user._id, isActive: true }, { isActive: false });
-
     const encryptedToken = encrypt(accessToken);
 
     const account = await WhatsAppAccount.create({
@@ -72,6 +78,8 @@ router.post('/accounts', authenticate, async (req, res) => {
       accessToken: encryptedToken,
       businessName: businessName || displayName,
     });
+
+    await deactivateOtherAccounts(req.user._id, account._id);
 
     const accountResponse = account.toObject();
     delete accountResponse.accessToken;
@@ -221,7 +229,6 @@ router.post('/embedded-signup/connect', authenticate, async (req, res) => {
     if (!accessToken || !phoneNumberId || !wabaId) return error(res, 'Missing required fields', 400);
 
     await activateWhatsAppNumber(wabaId, phoneNumberId, accessToken);
-    await WhatsAppAccount.updateMany({ userId: req.user._id, isActive: true }, { isActive: false });
 
     const encryptedToken = encrypt(accessToken);
 
@@ -234,6 +241,8 @@ router.post('/embedded-signup/connect', authenticate, async (req, res) => {
       accessToken: encryptedToken,
       businessName: displayName || 'My Business',
     });
+
+    await deactivateOtherAccounts(req.user._id, account._id);
 
     const accountResponse = account.toObject();
     delete accountResponse.accessToken;

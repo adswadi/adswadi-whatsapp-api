@@ -28,8 +28,14 @@ broadcastQueue.process('send-broadcast', 5, async (job) => {
     return { skipped: true };
   }
 
-  const waAccount = await WhatsAppAccount.findById(broadcast.waAccountId);
+  // If the account this broadcast was queued against got deactivated by a
+  // reconnect in the meantime, send through whichever account is active now
+  // instead of hard-failing the whole broadcast.
+  let waAccount = await WhatsAppAccount.findById(broadcast.waAccountId);
   if (!waAccount || !waAccount.isActive) {
+    waAccount = await WhatsAppAccount.findOne({ userId, isActive: true }).sort({ updatedAt: -1 });
+  }
+  if (!waAccount) {
     await Broadcast.findByIdAndUpdate(broadcastId, {
       status: 'failed',
       completedAt: new Date(),

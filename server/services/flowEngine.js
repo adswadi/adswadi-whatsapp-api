@@ -116,7 +116,14 @@ const processIncomingMessage = async (userId, message, conversation) => {
     // Find matching flows
     const flows = await Flow.find({ userId, isActive: true });
     const contact = await Contact.findById(conversation.contactId);
-    const waAccount = await WhatsAppAccount.findById(conversation.waAccountId);
+    // Resolve to whichever account is active *now*, not whatever the
+    // conversation was originally linked to — otherwise automated replies
+    // keep going out through a stale account after the user reconnects.
+    let waAccount = await WhatsAppAccount.findOne({ userId, isActive: true }).sort({ updatedAt: -1 });
+    if (!waAccount) waAccount = await WhatsAppAccount.findById(conversation.waAccountId);
+    else if (String(waAccount._id) !== String(conversation.waAccountId)) {
+      await Conversation.findByIdAndUpdate(conversation._id, { waAccountId: waAccount._id });
+    }
 
     if (!contact || !waAccount) return;
 
