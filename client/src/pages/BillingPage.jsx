@@ -64,6 +64,8 @@ const BillingPage = () => {
             setSubscription(subRes.data.data.subscription)
           } catch (_) {
             toast.error('Payment verification failed. Please contact support.')
+          } finally {
+            setPayLoading(null)
           }
         },
         prefill: {
@@ -89,9 +91,11 @@ const BillingPage = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to initiate payment')
-    } finally {
       setPayLoading(null)
     }
+    // Not cleared here on the success path — the Razorpay modal is still
+    // open at this point. It's cleared by the handler (payment completed)
+    // or modal.ondismiss (checkout cancelled/closed) instead.
   }
 
   const handleDownloadInvoice = async (invoiceId, invoiceNumber) => {

@@ -1,6 +1,13 @@
 const CryptoJS = require('crypto-js');
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default_32_char_key_change_this!!';
+// This key encrypts every customer's WhatsApp access token at rest. Falling
+// back to a hardcoded default here would mean anyone who reads this source
+// file (or the public repo) could decrypt every stored token — fail loudly
+// instead of silently using a known key.
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required and not set');
+}
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 const encrypt = (text) => {
   if (!text) return null;

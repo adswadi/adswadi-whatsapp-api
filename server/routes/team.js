@@ -26,7 +26,7 @@ router.post('/invite', authenticate, authorize('owner', 'admin'), async (req, re
     const { email, role = 'agent' } = req.body;
     if (!email) return error(res, 'Email required', 400);
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) return error(res, 'User already exists', 409);
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -66,7 +66,15 @@ router.put('/:id', authenticate, authorize('owner', 'admin'), async (req, res) =
     if (role) updates.role = role;
     if (isActive !== undefined) updates.isActive = isActive;
 
-    const member = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
+    // Only allow acting on a member of the caller's own organization —
+    // without this, any owner/admin could pass another organization's user
+    // id and modify or deactivate a completely unrelated customer's account.
+    const orgId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
+    const member = await User.findOneAndUpdate(
+      { _id: req.params.id, organizationId: orgId },
+      updates,
+      { new: true }
+    ).select('-password');
     if (!member) return error(res, 'Member not found', 404);
     return success(res, { member });
   } catch (err) {
@@ -81,8 +89,12 @@ router.delete('/:id', authenticate, authorize('owner'), async (req, res) => {
       return error(res, 'Cannot remove yourself', 400);
     }
 
-    await User.findByIdAndUpdate(req.params.id, { isActive: false });
     const orgId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
+    const member = await User.findOneAndUpdate(
+      { _id: req.params.id, organizationId: orgId },
+      { isActive: false }
+    );
+    if (!member) return error(res, 'Member not found', 404);
     await User.findByIdAndUpdate(orgId, { $pull: { teamMembers: req.params.id } });
 
     return success(res, {}, 'Member removed');

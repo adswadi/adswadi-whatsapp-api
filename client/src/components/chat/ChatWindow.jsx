@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
-  ArrowLeft, Phone, MoreVertical, Send, Paperclip, Smile,
+  ArrowLeft, Phone, Send, Paperclip,
   CheckCircle2, XCircle, User, Mic, Image, FileText
 } from 'lucide-react'
 import api from '@/lib/api'
@@ -238,9 +238,6 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
           >
             <User size={18} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700">
-            <MoreVertical size={18} />
-          </button>
         </div>
       </div>
 
@@ -319,9 +316,6 @@ const ChatWindow = ({ conversation, onBack, onStatusChange, onToggleContact }) =
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
             >
               <Paperclip size={18} />
-            </button>
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-              <Smile size={18} />
             </button>
           </div>
 

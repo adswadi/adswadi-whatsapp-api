@@ -126,6 +126,7 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
 
     // Find or create conversation
     let conversation = await Conversation.findOne({ userId: waAccount.userId, phoneNumber: from });
+    const isNewConversation = !conversation;
     if (!conversation) {
       conversation = await Conversation.create({
         userId: waAccount.userId,
@@ -187,7 +188,7 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
     }
 
     // Process flow engine
-    await processIncomingMessage(waAccount.userId, message, conversation);
+    await processIncomingMessage(waAccount.userId, message, conversation, isNewConversation);
 
     // Mark as read
     // await whatsappService.markMessageRead(waAccount, msgData.id);
@@ -248,10 +249,12 @@ const parseMessageContent = (msg) => {
 // POST /api/webhook/razorpay - Razorpay webhook
 router.post('/razorpay', async (req, res) => {
   try {
+    // Same fix as the WhatsApp webhook above: hash the exact raw bytes
+    // Razorpay signed, not a re-serialized copy that rarely matches byte-for-byte.
     const signature = req.headers['x-razorpay-signature'];
     const expectedSig = crypto
       .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
-      .update(JSON.stringify(req.body))
+      .update(req.rawBody || Buffer.from(JSON.stringify(req.body)))
       .digest('hex');
 
     if (signature !== expectedSig) {

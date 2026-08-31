@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Broadcast = require('../models/Broadcast');
+const WhatsAppAccount = require('../models/WhatsAppAccount');
 const { authenticate } = require('../middleware/auth');
 const { checkBroadcastLimit } = require('../middleware/planLimits');
 const { requireActiveSubscription } = require('../middleware/subscription');
@@ -53,6 +54,9 @@ router.post('/', authenticate, checkBroadcastLimit, async (req, res) => {
     if (!name || !waAccountId || !templateName) {
       return error(res, 'Name, account, and template are required', 400);
     }
+
+    const waAccount = await WhatsAppAccount.findOne({ _id: waAccountId, userId: req.user._id });
+    if (!waAccount) return error(res, 'WhatsApp account not found', 404);
 
     const broadcast = await Broadcast.create({
       userId: req.user._id,

@@ -4,11 +4,14 @@ const Contact = require('../models/Contact');
 const whatsappService = require('./whatsappService');
 const WhatsAppAccount = require('../models/WhatsAppAccount');
 
-const matchTrigger = (flow, message, conversation) => {
+const matchTrigger = (flow, message, conversation, isNewConversation) => {
   const trigger = flow.trigger;
 
   if (trigger.type === 'first_message') {
-    return conversation.messageCount === 0;
+    // Conversation has no messageCount field — this trigger never fired for
+    // anyone until this was wired up to whether the conversation was just
+    // created for this exact incoming message.
+    return !!isNewConversation;
   }
 
   if (trigger.type === 'keyword') {
@@ -106,7 +109,7 @@ const interpolateVariables = (text, contact) => {
     .replace(/{{email}}/gi, contact.email || '');
 };
 
-const processIncomingMessage = async (userId, message, conversation) => {
+const processIncomingMessage = async (userId, message, conversation, isNewConversation = false) => {
   try {
     // Check if conversation has an active flow
     if (conversation.flowActive && conversation.activeFlowId) {
@@ -128,7 +131,7 @@ const processIncomingMessage = async (userId, message, conversation) => {
     if (!contact || !waAccount) return;
 
     for (const flow of flows) {
-      if (matchTrigger(flow, message, conversation)) {
+      if (matchTrigger(flow, message, conversation, isNewConversation)) {
         // Start flow
         await Conversation.findByIdAndUpdate(conversation._id, {
           flowActive: true,

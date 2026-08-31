@@ -222,7 +222,7 @@ router.post('/create-order', authenticate, async (req, res) => {
 // POST /api/billing/verify-payment
 router.post('/verify-payment', authenticate, async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planName, billingCycle, invoiceId } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, invoiceId } = req.body;
 
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
@@ -234,13 +234,23 @@ router.post('/verify-payment', authenticate, async (req, res) => {
       return error(res, 'Payment verification failed', 400);
     }
 
-    // Update invoice
-    await Invoice.findByIdAndUpdate(invoiceId, {
-      status: 'paid',
-      razorpayPaymentId: razorpay_payment_id,
-      razorpaySignature: razorpay_signature,
-      paidAt: new Date(),
-    });
+    // The plan/amount being granted must come from the invoice we created
+    // (and were paid for), never from the request body — otherwise a client
+    // could pay for the cheapest plan and claim any plan name here. Also
+    // confirm this invoice belongs to this user, matches the order that was
+    // actually paid, and hasn't already been redeemed.
+    const invoice = await Invoice.findOne({ _id: invoiceId, userId: req.user._id });
+    if (!invoice) return error(res, 'Invoice not found', 404);
+    if (invoice.razorpayOrderId !== razorpay_order_id) return error(res, 'Order mismatch', 400);
+    if (invoice.status === 'paid') return error(res, 'Invoice already processed', 400);
+
+    const { planName, billingCycle } = invoice;
+
+    invoice.status = 'paid';
+    invoice.razorpayPaymentId = razorpay_payment_id;
+    invoice.razorpaySignature = razorpay_signature;
+    invoice.paidAt = new Date();
+    await invoice.save();
 
     // Calculate subscription end date
     const now = new Date();
@@ -261,7 +271,7 @@ router.post('/verify-payment', authenticate, async (req, res) => {
       planName,
       billingCycle,
       status: 'active',
-      amount: 0,
+      amount: invoice.totalAmount,
       currency: 'INR',
       startDate: now,
       endDate,
