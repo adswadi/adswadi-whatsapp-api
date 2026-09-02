@@ -19,4 +19,6 @@ const segmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+segmentSchema.index({ userId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Segment', segmentSchema);

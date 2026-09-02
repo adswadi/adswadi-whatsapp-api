@@ -52,5 +52,8 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ waMessageId: 1 });
+// Analytics and dashboard counters filter by user over a date range.
+messageSchema.index({ userId: 1, createdAt: -1 });
+messageSchema.index({ broadcastId: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);

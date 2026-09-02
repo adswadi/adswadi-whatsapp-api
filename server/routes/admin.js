@@ -14,16 +14,41 @@ const requirePlatformAdmin = (req, res, next) => {
 // GET /api/admin/users — every organization owner (billing is per-organization)
 router.get('/users', authenticate, requirePlatformAdmin, async (req, res) => {
   try {
-    const owners = await User.find({ organizationId: null }).select('-password').sort({ createdAt: -1 });
     const now = new Date();
+    const search = (req.query.search || '').trim();
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
 
-    const usersWithStatus = await Promise.all(owners.map(async (u) => {
-      const activeSub = await Subscription.findOne({ userId: u._id, status: 'active', endDate: { $gt: now } }).sort({ endDate: -1 });
+    const query = { organizationId: null };
+    if (search) {
+      // Escaped so a stray "(" or "*" in the box can't throw or scan wildly.
+      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(safe, 'i');
+      query.$or = [{ email: rx }, { name: rx }, { organizationName: rx }];
+    }
+
+    const owners = await User.find(query)
+      .select('name email organizationName plan trialEndsAt createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // One query for every owner on this page instead of one per owner —
+    // the old per-user findOne meant 1001 round trips at 1000 customers.
+    const activeSubs = await Subscription.find({
+      userId: { $in: owners.map((u) => u._id) },
+      status: 'active',
+      endDate: { $gt: now },
+    }).select('userId endDate').sort({ endDate: -1 }).lean();
+
+    const subByUser = new Map();
+    for (const sub of activeSubs) {
+      const key = String(sub.userId);
+      if (!subByUser.has(key)) subByUser.set(key, sub); // sorted desc, so first wins
+    }
+
+    const usersWithStatus = owners.map((u) => {
+      const activeSub = subByUser.get(String(u._id));
       const trialActive = u.trialEndsAt && now < new Date(u.trialEndsAt);
-      let status = 'expired';
-      if (activeSub) status = 'active';
-      else if (trialActive) status = 'trial';
-
       return {
         _id: u._id,
         name: u.name,
@@ -32,24 +57,39 @@ router.get('/users', authenticate, requirePlatformAdmin, async (req, res) => {
         plan: u.plan,
         trialEndsAt: u.trialEndsAt,
         subscriptionEndsAt: activeSub?.endDate || null,
-        status,
+        status: activeSub ? 'active' : trialActive ? 'trial' : 'expired',
         createdAt: u.createdAt,
       };
-    }));
+    });
+
+    // Stats cover every customer, not just the page above, so they stay
+    // correct once the list is capped or filtered by a search.
+    const [totalOwners, paidUserIds, revenueAgg] = await Promise.all([
+      User.countDocuments({ organizationId: null }),
+      Subscription.distinct('userId', { status: 'active', endDate: { $gt: now } }),
+      Invoice.aggregate([
+        { $match: { status: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
+    ]);
+
+    // A user who renewed early can still have a future trialEndsAt, so count
+    // them as active only — otherwise the buckets overlap and don't add up.
+    const trialCount = await User.countDocuments({
+      organizationId: null,
+      trialEndsAt: { $gt: now },
+      _id: { $nin: paidUserIds },
+    });
 
     const stats = {
-      total: usersWithStatus.length,
-      active: usersWithStatus.filter((u) => u.status === 'active').length,
-      trial: usersWithStatus.filter((u) => u.status === 'trial').length,
-      expired: usersWithStatus.filter((u) => u.status === 'expired').length,
+      total: totalOwners,
+      active: paidUserIds.length,
+      trial: trialCount,
+      expired: Math.max(totalOwners - paidUserIds.length - trialCount, 0),
+      totalRevenue: revenueAgg[0]?.total || 0,
     };
-    const revenueAgg = await Invoice.aggregate([
-      { $match: { status: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]);
-    stats.totalRevenue = revenueAgg[0]?.total || 0;
 
-    return success(res, { users: usersWithStatus, stats });
+    return success(res, { users: usersWithStatus, stats, truncated: usersWithStatus.length >= limit });
   } catch (err) {
     console.error('Admin users fetch error:', err);
     return error(res, 'Failed to fetch users', 500);

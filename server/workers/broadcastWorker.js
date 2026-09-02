@@ -156,6 +156,14 @@ broadcastQueue.process('send-broadcast', 5, async (job) => {
   return { sent, failed, total: contacts.length };
 });
 
+// Bull surfaces Redis connection trouble as an 'error' event. With no
+// listener attached that is an unhandled EventEmitter error, which takes the
+// whole API process down — a Redis blip would knock every customer offline
+// instead of just pausing broadcasts.
+broadcastQueue.on('error', (err) => {
+  console.error('Broadcast queue error (broadcasts paused, API unaffected):', err.message);
+});
+
 broadcastQueue.on('completed', (job, result) => {
   console.log(`Broadcast job ${job.id} completed:`, result);
 });

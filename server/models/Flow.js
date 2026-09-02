@@ -45,4 +45,7 @@ const flowSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// The flow engine runs this query on every single inbound message.
+flowSchema.index({ userId: 1, isActive: 1 });
+
 module.exports = mongoose.model('Flow', flowSchema);

@@ -26,4 +26,10 @@ const whatsAppAccountSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Every inbound webhook looks the account up by phoneNumberId, and every
+// send resolves the user's active account — both are collection scans
+// without these.
+whatsAppAccountSchema.index({ phoneNumberId: 1 });
+whatsAppAccountSchema.index({ userId: 1, isActive: 1, updatedAt: -1 });
+
 module.exports = mongoose.model('WhatsAppAccount', whatsAppAccountSchema);

@@ -59,4 +59,8 @@ userSchema.methods.toJSON = function () {
   return obj;
 };
 
+// Admin lists organization owners by { organizationId: null }; team routes
+// list members by organizationId.
+userSchema.index({ organizationId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('User', userSchema);

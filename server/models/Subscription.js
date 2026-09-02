@@ -27,4 +27,7 @@ const subscriptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Checked by requireActiveSubscription on every message-sending request.
+subscriptionSchema.index({ userId: 1, status: 1, endDate: -1 });
+
 module.exports = mongoose.model('Subscription', subscriptionSchema);

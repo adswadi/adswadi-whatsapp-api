@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Shield, RefreshCw, Users, CheckCircle2, Clock, XCircle, IndianRupee, Search } from 'lucide-react'
 import api from '@/lib/api'
@@ -23,32 +23,29 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true)
   const [renewingId, setRenewingId] = useState(null)
   const [search, setSearch] = useState('')
+  const [truncated, setTruncated] = useState(false)
 
-  const fetchUsers = async () => {
+  // Searching server-side rather than filtering the loaded page — the API
+  // returns the newest 100 organizations, so a client-side filter would only
+  // ever look at those and quietly miss the rest as the customer list grows.
+  const fetchUsers = async (searchTerm = search) => {
     setLoading(true)
     try {
-      const res = await api.get('/admin/users')
+      const res = await api.get('/admin/users', { params: searchTerm.trim() ? { search: searchTerm.trim() } : {} })
       setUsers(res.data.data.users || [])
       setStats(res.data.data.stats || null)
+      setTruncated(!!res.data.data.truncated)
     } catch (_) {
       toast.error('Failed to load users')
     }
     setLoading(false)
   }
 
-  const filteredUsers = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return users
-    return users.filter((u) =>
-      u.email?.toLowerCase().includes(q) ||
-      u.name?.toLowerCase().includes(q) ||
-      u.organizationName?.toLowerCase().includes(q)
-    )
-  }, [users, search])
-
   useEffect(() => {
-    if (user?.isPlatformAdmin) fetchUsers()
-  }, [user])
+    if (!user?.isPlatformAdmin) return
+    const t = setTimeout(() => fetchUsers(search), search ? 350 : 0)
+    return () => clearTimeout(t)
+  }, [user, search])
 
   if (user && !user.isPlatformAdmin) {
     return <Navigate to="/dashboard" replace />
@@ -100,7 +97,12 @@ const AdminPage = () => {
 
       <Card>
         <CardHeader className="flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <CardTitle>{filteredUsers.length} of {users.length} organizations</CardTitle>
+          <CardTitle>
+            {search
+              ? `${users.length} match${users.length === 1 ? '' : 'es'}`
+              : `${users.length} of ${stats?.total ?? users.length} organizations`}
+            {truncated && <span className="ml-2 text-xs font-normal text-gray-400">— search to find the rest</span>}
+          </CardTitle>
           <div className="flex items-center gap-2">
             <Input
               placeholder="Search by email or name..."
@@ -109,7 +111,7 @@ const AdminPage = () => {
               leftIcon={<Search size={14} />}
               className="w-64"
             />
-            <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={14} />} onClick={fetchUsers} loading={loading}>
+            <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={14} />} onClick={() => fetchUsers()} loading={loading}>
               Refresh
             </Button>
           </div>
@@ -121,13 +123,13 @@ const AdminPage = () => {
                 <div key={i} className="h-14 bg-gray-100 rounded-xl skeleton" />
               ))}
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : users.length === 0 ? (
             <div className="py-10 text-center text-sm text-gray-400">
               {search ? 'No matching organizations' : 'No organizations yet'}
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {filteredUsers.map((u) => {
+              {users.map((u) => {
                 const badge = STATUS_BADGE[u.status] || STATUS_BADGE.expired
                 return (
                   <div key={u._id} className="flex items-center justify-between px-6 py-4">

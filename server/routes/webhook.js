@@ -98,9 +98,12 @@ const handleStatusUpdate = async (statusData, waAccountId) => {
       await Broadcast.findByIdAndUpdate(message.broadcastId, { $inc: { [incField]: 1 } });
     }
 
-    // Emit status update via socket
-    if (global.io) {
-      global.io.emit('message_status', { messageId: id, status });
+    // Emit status update via socket — to the owning user's room only. A bare
+    // io.emit() sends every customer's delivery receipts to every connected
+    // client, which both leaks message IDs across tenants and costs one
+    // emit per socket on the platform for each status change.
+    if (global.io && message?.userId) {
+      global.io.to(`user_${message.userId}`).emit('message_status', { messageId: id, status });
     }
   } catch (err) {
     console.error('Status update error:', err.message);
@@ -112,7 +115,12 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
     const from = msgData.from;
     const contactName = contactData?.profile?.name || from;
 
-    // Find or create contact
+    const now = new Date();
+
+    // Contact and conversation each used to be written twice per inbound
+    // message — once here and once again after the message was saved. Every
+    // one of those is a round trip on the busiest path in the system, so the
+    // stats are folded into a single write each, after the content is parsed.
     let contact = await Contact.findOne({ userId: waAccount.userId, phone: from });
     if (!contact) {
       contact = await Contact.create({
@@ -121,29 +129,16 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
         phone: from,
         source: 'whatsapp',
         waProfileName: contactName,
+        lastMessageAt: now,
+        lastSeen: now,
+        messageCount: 1,
       });
     } else {
       await Contact.findByIdAndUpdate(contact._id, {
         waProfileName: contactName,
-        lastMessageAt: new Date(),
-      });
-    }
-
-    // Find or create conversation
-    let conversation = await Conversation.findOne({ userId: waAccount.userId, phoneNumber: from });
-    const isNewConversation = !conversation;
-    if (!conversation) {
-      conversation = await Conversation.create({
-        userId: waAccount.userId,
-        contactId: contact._id,
-        waAccountId: waAccount._id,
-        phoneNumber: from,
-        windowExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
-    } else {
-      await Conversation.findByIdAndUpdate(conversation._id, {
-        windowExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        $inc: { unreadCount: 1 },
+        lastMessageAt: now,
+        lastSeen: now,
+        $inc: { messageCount: 1 },
       });
     }
 
@@ -166,6 +161,38 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
       }
     }
 
+    // Find or create the conversation once the content is known, so the
+    // preview and the 24-hour window go in with the same write.
+    const lastMessage = {
+      text: content.text || `[${msgData.type}]`,
+      type: msgData.type,
+      timestamp: now,
+      fromContact: true,
+    };
+    const windowExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    let conversation = await Conversation.findOne({ userId: waAccount.userId, phoneNumber: from });
+    const isNewConversation = !conversation;
+    if (!conversation) {
+      conversation = await Conversation.create({
+        userId: waAccount.userId,
+        contactId: contact._id,
+        waAccountId: waAccount._id,
+        phoneNumber: from,
+        windowExpiresAt,
+        lastMessage,
+        status: 'open',
+        unreadCount: 1,
+      });
+    } else {
+      await Conversation.findByIdAndUpdate(conversation._id, {
+        windowExpiresAt,
+        lastMessage,
+        status: 'open',
+        $inc: { unreadCount: 1 },
+      });
+    }
+
     // Save message
     const message = await Message.create({
       conversationId: conversation._id,
@@ -177,26 +204,7 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
       type: msgData.type,
       content,
       status: 'delivered',
-      statusTimestamps: { delivered: new Date() },
-    });
-
-    // Update conversation last message
-    const lastMsgText = content.text || `[${msgData.type}]`;
-    await Conversation.findByIdAndUpdate(conversation._id, {
-      lastMessage: {
-        text: lastMsgText,
-        type: msgData.type,
-        timestamp: new Date(),
-        fromContact: true,
-      },
-      status: 'open',
-    });
-
-    // Update contact stats
-    await Contact.findByIdAndUpdate(contact._id, {
-      lastSeen: new Date(),
-      lastMessageAt: new Date(),
-      $inc: { messageCount: 1 },
+      statusTimestamps: { delivered: now },
     });
 
     // Emit via socket

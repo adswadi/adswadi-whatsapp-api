@@ -83,12 +83,23 @@ app.use(cors({
   credentials: true,
 }));
 
+// Railway (and any other edge proxy) terminates the connection, so without
+// this every request looks like it came from the proxy's IP — the rate limit
+// below would then be a single shared bucket for the whole platform instead
+// of one per client.
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 1000,
   message: { success: false, message: 'Too many requests, please try again later.' },
-  validate: { xForwardedForHeader: false },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Meta delivers every customer's webhooks from its own IP range, so this
+  // traffic grows with the customer count and would be throttled as if it
+  // were one abusive client. The route verifies Meta's HMAC signature itself.
+  skip: (req) => req.originalUrl.startsWith('/api/webhook'),
 });
 app.use('/api/', limiter);
 
@@ -103,7 +114,11 @@ app.use('/api/webhook', express.raw({ type: 'application/json' }), (req, res, ne
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(morgan('dev'));
+// 'dev' logs a line per request with colour codes — useful locally, just
+// noise and overhead once every customer's traffic runs through here.
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev', {
+  skip: (req) => process.env.NODE_ENV === 'production' && req.originalUrl.startsWith('/api/webhook'),
+}));
 
 // Health check
 app.get('/health', (req, res) => {
