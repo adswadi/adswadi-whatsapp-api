@@ -7,6 +7,11 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Broadcast = require('../models/Broadcast');
 const { processIncomingMessage } = require('../services/flowEngine');
+const whatsappService = require('../services/whatsappService');
+const { uploadToCloudinary } = require('../middleware/upload');
+const { decrypt } = require('../utils/encryption');
+
+const MEDIA_TYPES = ['image', 'video', 'audio', 'document', 'sticker'];
 
 // GET /api/webhook/whatsapp - Webhook verification
 router.get('/whatsapp', (req, res) => {
@@ -144,6 +149,22 @@ const handleIncomingMessage = async (msgData, waAccount, contactData) => {
 
     // Parse message content
     const content = parseMessageContent(msgData);
+
+    // Meta's media URL expires and needs an auth header, so the dashboard
+    // can't load it directly — pull the bytes now and re-host on Cloudinary.
+    if (MEDIA_TYPES.includes(msgData.type) && content.mediaId) {
+      try {
+        const token = decrypt(waAccount.accessToken);
+        const { buffer, mimeType } = await whatsappService.downloadMedia(content.mediaId, token);
+        const result = await uploadToCloudinary(buffer, {
+          resource_type: msgData.type === 'video' ? 'video' : msgData.type === 'audio' ? 'video' : 'auto',
+        });
+        content.mediaUrl = result.secure_url;
+        if (!content.mimeType) content.mimeType = mimeType;
+      } catch (mediaErr) {
+        console.error('Incoming media download/upload error:', mediaErr.message);
+      }
+    }
 
     // Save message
     const message = await Message.create({

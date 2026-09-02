@@ -138,6 +138,18 @@ const getMediaUrl = async (mediaId, accessToken) => {
   return response.data.url;
 };
 
+// Meta's media URL is short-lived and requires the same access token to
+// fetch, so the browser can't load it directly — download the bytes here
+// and hand back a buffer the caller can re-host (e.g. on Cloudinary).
+const downloadMedia = async (mediaId, accessToken) => {
+  const mediaUrl = await getMediaUrl(mediaId, accessToken);
+  const response = await axios.get(mediaUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    responseType: 'arraybuffer',
+  });
+  return { buffer: Buffer.from(response.data), mimeType: response.headers['content-type'] };
+};
+
 module.exports = {
   sendTextMessage,
   sendTemplateMessage,
@@ -148,4 +160,5 @@ module.exports = {
   getPhoneNumbers,
   uploadMedia,
   getMediaUrl,
+  downloadMedia,
 };

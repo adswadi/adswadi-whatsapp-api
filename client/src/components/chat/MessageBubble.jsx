@@ -27,7 +27,9 @@ const MediaContent = ({ type, content }) => {
   }
 
   if (type === 'audio') {
-    return (
+    return content.mediaUrl ? (
+      <audio src={content.mediaUrl} controls className="mb-1 max-w-[240px]" />
+    ) : (
       <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2 mb-1">
         <Mic size={16} />
         <div className="flex-1 h-1 bg-white/50 rounded-full" />
@@ -38,15 +40,25 @@ const MediaContent = ({ type, content }) => {
 
   if (type === 'document') {
     return (
-      <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2 mb-1">
+      <a
+        href={content.mediaUrl || undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          'flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2 mb-1',
+          content.mediaUrl && 'hover:bg-white/30 cursor-pointer'
+        )}
+      >
         <FileText size={16} />
         <span className="text-sm">{content.fileName || 'Document'}</span>
-      </div>
+      </a>
     )
   }
 
   if (type === 'video') {
-    return (
+    return content.mediaUrl ? (
+      <video src={content.mediaUrl} controls className="max-w-full rounded-lg mb-1" />
+    ) : (
       <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2 mb-1">
         <Video size={16} />
         <span className="text-sm">Video</span>
