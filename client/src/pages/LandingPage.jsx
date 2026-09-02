@@ -7,12 +7,45 @@ import { ArrowRight, CheckCircle, ChevronDown, Star, Play, X, Menu } from 'lucid
 ═══════════════════════════════════════════════════ */
 
 const NAV_LINKS = [
-  { label: 'Product', sub: ['WhatsApp Business API','Bulk Broadcast','AI Chatbot','Live Inbox','Automation Flows','Analytics'] },
-  { label: 'Features', sub: ['Broadcasting','AI Auto-Reply','Chatbots','Payments','Forms','Catalogue'] },
-  { label: 'Industries', sub: ['E-commerce','Education','Finance','Healthcare','Real Estate','Events'] },
-  { label: 'Integrations', sub: ['Shopify','Razorpay','WooCommerce','Zoho CRM','Google Sheets'] },
-  { label: 'Pricing', sub: null },
-  { label: 'Resources', sub: ['Help Center','Blog','API Docs','Case Studies','YouTube'] },
+  { label: 'Product', sub: [
+    { label: 'WhatsApp Business API', href: '/features/whatsapp-api' },
+    { label: 'Bulk Broadcast', href: '/features/bulk-broadcast' },
+    { label: 'AI Chatbot', href: '/features/ai-chatbot' },
+    { label: 'Live Inbox', href: '/features/live-inbox' },
+    { label: 'Automation Flows', href: '/features/automation-flows' },
+    { label: 'Analytics', href: '/features/analytics' },
+  ]},
+  { label: 'Features', sub: [
+    { label: 'Broadcasting', href: '/features/bulk-broadcast' },
+    { label: 'AI Auto-Reply', href: '/features/ai-chatbot' },
+    { label: 'Chatbots', href: '/features/ai-chatbot' },
+    { label: 'Payments', href: '/features/payments' },
+    { label: 'Forms', href: '/features/forms' },
+    { label: 'Catalogue', href: '/features/catalogue' },
+  ]},
+  { label: 'Industries', sub: [
+    { label: 'E-commerce', href: '/industries/ecommerce' },
+    { label: 'Education', href: '/industries/education' },
+    { label: 'Finance', href: '/industries/finance' },
+    { label: 'Healthcare', href: '/industries/healthcare' },
+    { label: 'Real Estate', href: '/industries/real-estate' },
+    { label: 'Events', href: '/industries/events' },
+  ]},
+  { label: 'Integrations', sub: [
+    { label: 'Shopify', href: '/integrations/shopify' },
+    { label: 'Razorpay', href: '/integrations/razorpay' },
+    { label: 'WooCommerce', href: '/integrations/woocommerce' },
+    { label: 'Zoho CRM', href: '/integrations/zoho-crm' },
+    { label: 'Google Sheets', href: '/integrations/google-sheets' },
+  ]},
+  { label: 'Pricing', href: '/pricing', sub: null },
+  { label: 'Resources', sub: [
+    { label: 'Help Center', href: '/help-center' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'API Docs', href: '/developers' },
+    { label: 'Case Studies', href: '/case-studies' },
+    { label: 'YouTube', href: null },
+  ]},
 ]
 
 // Real brand logos with exact brand colors + Google favicon service
@@ -518,15 +551,27 @@ export default function LandingPage() {
 
           {/* Nav links */}
           <div className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map(({label, sub}) => (
+            {NAV_LINKS.map(({label, href, sub}) => (
               <div key={label} className="nav-item relative">
-                <button className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all">
-                  {label} {sub && <ChevronDown size={13} className="text-gray-400"/>}
-                </button>
+                {sub ? (
+                  <button className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all">
+                    {label} <ChevronDown size={13} className="text-gray-400"/>
+                  </button>
+                ) : (
+                  <Link to={href} className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all">
+                    {label}
+                  </Link>
+                )}
                 {sub && (
                   <div className="nav-dropdown">
                     {sub.map(s => (
-                      <a key={s} href="#" className="block px-3 py-2 text-sm text-gray-600 hover:text-brand-purple hover:bg-purple-50 rounded-lg transition-all">{s}</a>
+                      s.href ? (
+                        <Link key={s.label} to={s.href} className="block px-3 py-2 text-sm text-gray-600 hover:text-brand-purple hover:bg-purple-50 rounded-lg transition-all">{s.label}</Link>
+                      ) : (
+                        <span key={s.label} className="flex items-center justify-between px-3 py-2 text-sm text-gray-400 cursor-not-allowed rounded-lg">
+                          {s.label} <span className="text-[9px] font-semibold bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">Soon</span>
+                        </span>
+                      )
                     ))}
                   </div>
                 )}
@@ -1027,9 +1072,30 @@ export default function LandingPage() {
             </div>
 
             {[
-              { title:'Platform', links:['WhatsApp API','Bulk Broadcast','AI Chatbot','Live Inbox','Analytics','Pricing'] },
-              { title:'Industries', links:['E-commerce','Education','Finance','Healthcare','Real Estate','Events'] },
-              { title:'Resources', links:['Help Center','Blog','API Docs','Case Studies','YouTube','Template Library'] },
+              { title:'Platform', links:[
+                { label:'WhatsApp API', href:'/features/whatsapp-api' },
+                { label:'Bulk Broadcast', href:'/features/bulk-broadcast' },
+                { label:'AI Chatbot', href:'/features/ai-chatbot' },
+                { label:'Live Inbox', href:'/features/live-inbox' },
+                { label:'Analytics', href:'/features/analytics' },
+                { label:'Pricing', href:'/pricing' },
+              ]},
+              { title:'Industries', links:[
+                { label:'E-commerce', href:'/industries/ecommerce' },
+                { label:'Education', href:'/industries/education' },
+                { label:'Finance', href:'/industries/finance' },
+                { label:'Healthcare', href:'/industries/healthcare' },
+                { label:'Real Estate', href:'/industries/real-estate' },
+                { label:'Events', href:'/industries/events' },
+              ]},
+              { title:'Resources', links:[
+                { label:'Help Center', href:'/help-center' },
+                { label:'Blog', href:'/blog' },
+                { label:'API Docs', href:'/developers' },
+                { label:'Case Studies', href:'/case-studies' },
+                { label:'YouTube', href:null },
+                { label:'Template Library', href:'/template-library' },
+              ]},
               { title:'Company', links:[
                 { label:'About Us', href:'/about' },
                 { label:'Careers', href:'/careers' },
@@ -1042,19 +1108,15 @@ export default function LandingPage() {
               <div key={title}>
                 <h4 className="text-white font-bold text-sm mb-4">{title}</h4>
                 <ul className="space-y-2">
-                  {links.map(l => {
-                    const label = typeof l === 'string' ? l : l.label
-                    const href = typeof l === 'string' ? '#' : l.href
-                    return (
-                      <li key={label}>
-                        {href === '#' ? (
-                          <a href="#" className="text-xs hover:text-white transition-colors">{label}</a>
-                        ) : (
-                          <Link to={href} className="text-xs hover:text-white transition-colors">{label}</Link>
-                        )}
-                      </li>
-                    )
-                  })}
+                  {links.map(({label, href}) => (
+                    <li key={label}>
+                      {href ? (
+                        <Link to={href} className="text-xs hover:text-white transition-colors">{label}</Link>
+                      ) : (
+                        <span className="text-xs text-gray-600 cursor-not-allowed">{label} <span className="text-[9px]">(Soon)</span></span>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             ))}

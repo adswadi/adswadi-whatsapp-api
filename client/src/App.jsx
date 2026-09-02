@@ -30,6 +30,15 @@ import AnalyticsPage from '@/pages/AnalyticsPage'
 import BillingPage from '@/pages/BillingPage'
 import SettingsPage from '@/pages/SettingsPage'
 import AdminPage from '@/pages/AdminPage'
+import FeatureDetailPage from '@/pages/marketing/FeatureDetailPage'
+import IndustryDetailPage from '@/pages/marketing/IndustryDetailPage'
+import IntegrationDetailPage from '@/pages/marketing/IntegrationDetailPage'
+import PricingPage from '@/pages/marketing/PricingPage'
+import HelpCenterPage from '@/pages/marketing/HelpCenterPage'
+import BlogPage from '@/pages/marketing/BlogPage'
+import ApiDocsPage from '@/pages/marketing/ApiDocsPage'
+import CaseStudiesPage from '@/pages/marketing/CaseStudiesPage'
+import TemplateLibraryPage from '@/pages/marketing/TemplateLibraryPage'
 
 const ProtectedRoute = ({ children }) => {
   const { accessToken, user, isInitialized } = useAuthStore()
@@ -110,6 +119,15 @@ function App() {
         <Route path="/refund-policy" element={<RefundPage />} />
         <Route path="/careers" element={<CareersPage />} />
         <Route path="/partner-program" element={<PartnerPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/features/:slug" element={<FeatureDetailPage />} />
+        <Route path="/industries/:slug" element={<IndustryDetailPage />} />
+        <Route path="/integrations/:slug" element={<IntegrationDetailPage />} />
+        <Route path="/help-center" element={<HelpCenterPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/developers" element={<ApiDocsPage />} />
+        <Route path="/case-studies" element={<CaseStudiesPage />} />
+        <Route path="/template-library" element={<TemplateLibraryPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
