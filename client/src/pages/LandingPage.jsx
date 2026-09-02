@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CheckCircle, ChevronDown, Star, Play, X, Menu } from 'lucide-react'
+import {
+  ArrowRight, CheckCircle, ChevronDown, Star, Play, X, Menu,
+  ShoppingBag, GraduationCap, HeartPulse, Building2, UtensilsCrossed, Scissors,
+  Plane, Landmark, CalendarDays, Store, Dumbbell, Car,
+} from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════
    DATA
@@ -48,44 +52,22 @@ const NAV_LINKS = [
   ]},
 ]
 
-// Real brand logos with exact brand colors + Google favicon service
-const CLIENTS = [
-  { name: 'Zomato',        color: '#E23744', bg: '#FFF0F1', favicon: 'zomato.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#E23744"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="15" fontWeight="900" fontFamily="Arial">Z</text></svg> },
-  { name: 'Swiggy',        color: '#FC8019', bg: '#FFF4EC', favicon: 'swiggy.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#FC8019"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">SW</text></svg> },
-  { name: 'Razorpay',      color: '#072654', bg: '#EEF2FF', favicon: 'razorpay.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#072654"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">Rp</text></svg> },
-  { name: 'Paytm',         color: '#002970', bg: '#EFF6FF', favicon: 'paytm.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#002970"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="#00B9F1" fontSize="10" fontWeight="900" fontFamily="Arial">PTM</text></svg> },
-  { name: 'Nykaa',         color: '#FC2779', bg: '#FFF0F6', favicon: 'nykaa.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#FC2779"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">NK</text></svg> },
-  { name: 'Meesho',        color: '#9F00C5', bg: '#F9F0FF', favicon: 'meesho.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#9F00C5"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">MS</text></svg> },
-  { name: 'BYJU\'S',       color: '#3D2D8E', bg: '#F0EEFF', favicon: 'byjus.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#3D2D8E"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="#FFC807" fontSize="10" fontWeight="900" fontFamily="Arial">BYJ</text></svg> },
-  { name: 'PhysicsWallah', color: '#0F4B8C', bg: '#EFF6FF', favicon: 'pw.live',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#0F4B8C"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">PW</text></svg> },
-  { name: 'Myntra',        color: '#FF3F6C', bg: '#FFF0F3', favicon: 'myntra.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#FF3F6C"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">MN</text></svg> },
-  { name: 'boAt',          color: '#E63946', bg: '#FFF0F0', favicon: 'boat-lifestyle.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#111"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="12" fontWeight="900" fontFamily="Arial">boAt</text></svg> },
-  { name: 'MamaEarth',     color: '#7CB518', bg: '#F3FFDB', favicon: 'mamaearth.in',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#7CB518"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" fontFamily="Arial">ME</text></svg> },
-  { name: 'Bajaj Finance',  color: '#003087', bg: '#EFF4FF', favicon: 'bajajfinserv.in',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#003087"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">BF</text></svg> },
-  { name: 'Tata Motors',   color: '#1C3E6E', bg: '#EEF4FF', favicon: 'tatamotors.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#1C3E6E"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">TM</text></svg> },
-  { name: 'Asian Paints',  color: '#A8151A', bg: '#FFF0F0', favicon: 'asianpaints.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#A8151A"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">AP</text></svg> },
-  { name: 'Godrej',        color: '#005AA9', bg: '#EFF6FF', favicon: 'godrej.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#005AA9"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">GR</text></svg> },
-  { name: 'Wipro',         color: '#341C74', bg: '#F2EEFF', favicon: 'wipro.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#341C74"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">WP</text></svg> },
-  { name: 'IndiaMart',     color: '#FF6A00', bg: '#FFF3EB', favicon: 'indiamart.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#FF6A00"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="900" fontFamily="Arial">IM</text></svg> },
-  { name: 'OYO',           color: '#EF2B2D', bg: '#FFF0F0', favicon: 'oyorooms.com',
-    svg: <svg viewBox="0 0 40 40" className="w-full h-full"><rect width="40" height="40" rx="8" fill="#EF2B2D"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="12" fontWeight="900" fontFamily="Arial">OYO</text></svg> },
+// Business categories we serve. These are the kinds of businesses the
+// platform is built for — not a customer list, so nothing here claims an
+// endorsement we can't back up.
+const BUSINESS_TYPES = [
+  { name: 'D2C & E-commerce',   icon: ShoppingBag,      color: '#7B2FBE', bg: '#F5F0FF' },
+  { name: 'Coaching Institutes', icon: GraduationCap,   color: '#4A6CF7', bg: '#EEF2FF' },
+  { name: 'Clinics & Hospitals', icon: HeartPulse,      color: '#E91E8C', bg: '#FFF0F7' },
+  { name: 'Real Estate',         icon: Building2,       color: '#0F4B8C', bg: '#EFF6FF' },
+  { name: 'Restaurants & Cafés', icon: UtensilsCrossed, color: '#FC8019', bg: '#FFF4EC' },
+  { name: 'Salons & Spas',       icon: Scissors,        color: '#C2185B', bg: '#FFF0F5' },
+  { name: 'Travel Agencies',     icon: Plane,           color: '#0EA5E9', bg: '#EFF9FF' },
+  { name: 'NBFC & Lending',      icon: Landmark,        color: '#003087', bg: '#EFF4FF' },
+  { name: 'Event Managers',      icon: CalendarDays,    color: '#9F00C5', bg: '#F9F0FF' },
+  { name: 'Retail Stores',       icon: Store,           color: '#7CB518', bg: '#F5FFE8' },
+  { name: 'Gyms & Fitness',      icon: Dumbbell,        color: '#E63946', bg: '#FFF0F0' },
+  { name: 'Auto Dealerships',    icon: Car,             color: '#1C3E6E', bg: '#EEF4FF' },
 ]
 
 const WHATSAPP_STATS = [
@@ -188,48 +170,30 @@ const PLANS = [
    SMALL COMPONENTS
 ═══════════════════════════════════════════════════ */
 
-// ── Single brand logo card ─────────────────────────
-const BrandLogo = ({ name, color, bg, favicon, svg }) => {
-  const [faviconOk, setFaviconOk] = useState(true)
-  // Google's S2 favicon service — returns real brand logo at 64px, very reliable
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${favicon}&sz=64`
-
-  return (
+// ── Single business-category card ─────────────────
+const BusinessTypeCard = ({ name, icon: Icon, color, bg }) => (
+  <div
+    className="flex items-center gap-3 mx-4 px-5 py-3 rounded-2xl border whitespace-nowrap min-w-max cursor-default select-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+    style={{
+      background: '#fff',
+      borderColor: color + '22',
+      boxShadow: `0 2px 12px ${color}10`,
+    }}
+  >
     <div
-      className="flex items-center gap-3 mx-4 px-5 py-3 rounded-2xl border whitespace-nowrap min-w-max cursor-default select-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-      style={{
-        background: '#fff',
-        borderColor: color + '22',
-        boxShadow: `0 2px 12px ${color}10`,
-      }}
+      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{ background: bg, border: `1.5px solid ${color}25` }}
     >
-      {/* Logo icon box */}
-      <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 relative"
-        style={{ background: bg, border: `1.5px solid ${color}25` }}
-      >
-        {faviconOk ? (
-          <img
-            src={faviconUrl}
-            alt={name}
-            className="w-7 h-7 object-contain"
-            onError={() => setFaviconOk(false)}
-          />
-        ) : (
-          /* Brand-colored SVG fallback */
-          <div className="w-full h-full">{svg}</div>
-        )}
-      </div>
-
-      {/* Brand name */}
-      <span className="text-sm font-bold text-gray-700" style={{ letterSpacing: '-0.01em' }}>
-        {name}
-      </span>
+      <Icon size={18} style={{ color }} />
     </div>
-  )
-}
 
-// ── Marquee of logos ──────────────────────────────
+    <span className="text-sm font-bold text-gray-700" style={{ letterSpacing: '-0.01em' }}>
+      {name}
+    </span>
+  </div>
+)
+
+// ── Marquee of business categories ────────────────
 const LogoMarquee = () => (
   <div className="overflow-hidden py-3 relative">
     {/* fade edges */}
@@ -240,15 +204,15 @@ const LogoMarquee = () => (
 
     {/* Row 1 — forward */}
     <div className="flex mb-3" style={{ animation: 'marquee 40s linear infinite', width: 'max-content' }}>
-      {[...CLIENTS, ...CLIENTS].map((c, i) => (
-        <BrandLogo key={i} {...c} />
+      {[...BUSINESS_TYPES, ...BUSINESS_TYPES].map((c, i) => (
+        <BusinessTypeCard key={i} {...c} />
       ))}
     </div>
 
     {/* Row 2 — reverse (offset half) */}
     <div className="flex" style={{ animation: 'marquee 40s linear infinite reverse', width: 'max-content', animationDelay: '-20s' }}>
-      {[...CLIENTS, ...CLIENTS].map((c, i) => (
-        <BrandLogo key={i} {...c} />
+      {[...BUSINESS_TYPES, ...BUSINESS_TYPES].map((c, i) => (
+        <BusinessTypeCard key={i} {...c} />
       ))}
     </div>
   </div>
@@ -732,10 +696,10 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          CLIENT LOGOS MARQUEE
+          BUSINESS CATEGORIES MARQUEE
       ══════════════════════════════════════════ */}
       <section className="py-10 border-y border-gray-100 bg-white overflow-hidden">
-        <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">Trusted by 10,000+ Indian businesses</p>
+        <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">Built for Indian businesses of every kind</p>
         <LogoMarquee/>
       </section>
 
