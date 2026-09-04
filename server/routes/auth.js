@@ -316,7 +316,7 @@ router.post('/complete-onboarding', authenticate, async (req, res) => {
 router.post('/accept-invite', async (req, res) => {
   try {
     const { token, name, password } = req.body;
-    const user = await User.findOne({ inviteToken: token });
+    const user = await User.findOne({ inviteToken: token, isRemoved: { $ne: true } });
     if (!user) return error(res, 'Invalid or expired invite token', 400);
 
     const passwordError = validatePassword(password);

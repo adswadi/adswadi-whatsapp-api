@@ -10,6 +10,10 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: null },
     plan: { type: String, enum: ['free', 'starter', 'growth', 'enterprise'], default: 'free' },
     isActive: { type: Boolean, default: true },
+    // Separate from isActive, which a pending invite also starts as false —
+    // conflating the two hid removed teammates and pending invites alike
+    // once removal started reusing isActive.
+    isRemoved: { type: Boolean, default: false },
     isEmailVerified: { type: Boolean, default: false },
     emailOtp: { type: String, default: null },
     emailOtpExpires: { type: Date, default: null },

@@ -15,6 +15,7 @@ router.get('/', authenticate, async (req, res) => {
 
     const members = await User.find({
       $or: [{ _id: ownerId }, { organizationId: ownerId }],
+      isRemoved: { $ne: true },
     }).select('name email role avatar isActive lastLogin createdAt');
 
     const limits = await getPlanLimits(ownerUser?.plan || 'free');
@@ -45,7 +46,11 @@ router.post('/invite', authenticate, authorize('owner', 'admin'), async (req, re
       // Counts pending invites too (they're created as real, inactive User
       // rows below) — otherwise sending 5 invites at once on a 3-seat plan
       // would blow past the limit before any of them were even accepted.
-      const seatsUsed = await User.countDocuments({ $or: [{ _id: orgId }, { organizationId: orgId }] });
+      // Removed members don't count, so removing someone actually frees a seat.
+      const seatsUsed = await User.countDocuments({
+        $or: [{ _id: orgId }, { organizationId: orgId }],
+        isRemoved: { $ne: true },
+      });
       if (seatsUsed >= limits.team_members) {
         return error(
           res,
@@ -117,7 +122,7 @@ router.delete('/:id', authenticate, authorize('owner'), async (req, res) => {
     const orgId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
     const member = await User.findOneAndUpdate(
       { _id: req.params.id, organizationId: orgId },
-      { isActive: false }
+      { isActive: false, isRemoved: true }
     );
     if (!member) return error(res, 'Member not found', 404);
     await User.findByIdAndUpdate(orgId, { $pull: { teamMembers: req.params.id } });
