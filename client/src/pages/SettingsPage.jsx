@@ -210,6 +210,8 @@ const SettingsPage = () => {
   const [notifications, setNotifications] = useState({ email: true, browser: true, newMessage: true, broadcastComplete: true })
   const [waAccounts, setWaAccounts] = useState([])
   const [teamMembers, setTeamMembers] = useState([])
+  const [seatLimit, setSeatLimit] = useState(null) // -1 = unlimited, null = unknown yet
+  const [teamPlanName, setTeamPlanName] = useState(null)
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
   const [showPasswords, setShowPasswords] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -281,6 +283,8 @@ const SettingsPage = () => {
     try {
       const res = await api.get('/team')
       setTeamMembers(res.data.data.members || [])
+      setSeatLimit(res.data.data.seatLimit ?? null)
+      setTeamPlanName(res.data.data.planName || null)
     } catch (_) {}
   }
 
@@ -709,21 +713,35 @@ const SettingsPage = () => {
           {/* Team tab */}
           {activeTab === 'team' && (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Team Members</CardTitle>
+                {seatLimit !== null && (
+                  <Badge variant={seatLimit !== -1 && teamMembers.length >= seatLimit ? 'red' : 'default'} className="text-xs capitalize">
+                    {seatLimit === -1 ? 'Unlimited seats' : `${teamMembers.length} / ${seatLimit} seats · ${teamPlanName} plan`}
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="team@company.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button variant="gradient" loading={loading} onClick={inviteTeamMember} leftIcon={<Plus size={14} />}>
-                    Invite
-                  </Button>
-                </div>
+                {seatLimit !== null && seatLimit !== -1 && teamMembers.length >= seatLimit ? (
+                  <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    <p className="text-sm text-amber-800">
+                      You've used all {seatLimit} seats on your {teamPlanName} plan. Upgrade to invite more teammates.
+                    </p>
+                    <Button variant="secondary" size="sm" onClick={() => window.location.assign('/billing')}>Upgrade</Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="team@company.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button variant="gradient" loading={loading} onClick={inviteTeamMember} leftIcon={<Plus size={14} />}>
+                      Invite
+                    </Button>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {teamMembers.map((m) => (
                     <div key={m._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">

@@ -5,16 +5,21 @@ const User = require('../models/User');
 const { authenticate, authorize } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
 const { sendInviteEmail } = require('../services/emailService');
+const { getPlanLimits } = require('../config/planLimits');
 
 // GET /api/team
 router.get('/', authenticate, async (req, res) => {
   try {
-    const owner = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
+    const ownerId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
+    const ownerUser = req.user.role === 'owner' ? req.user : await User.findById(ownerId);
+
     const members = await User.find({
-      $or: [{ _id: owner }, { organizationId: owner }],
+      $or: [{ _id: ownerId }, { organizationId: ownerId }],
     }).select('name email role avatar isActive lastLogin createdAt');
 
-    return success(res, { members });
+    const limits = await getPlanLimits(ownerUser?.plan || 'free');
+
+    return success(res, { members, seatLimit: limits.team_members, planName: ownerUser?.plan || 'free' });
   } catch (err) {
     return error(res, 'Failed to fetch team', 500);
   }
@@ -29,8 +34,28 @@ router.post('/invite', authenticate, authorize('owner', 'admin'), async (req, re
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) return error(res, 'User already exists', 409);
 
-    const inviteToken = crypto.randomBytes(32).toString('hex');
     const orgId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
+    // Billing (and the plan's seat count) lives on the organization owner,
+    // not on whichever admin is sending this invite.
+    const owner = req.user.role === 'owner' ? req.user : await User.findById(orgId);
+    if (!owner) return error(res, 'Organization owner not found', 404);
+
+    const limits = await getPlanLimits(owner.plan);
+    if (limits.team_members !== -1) {
+      // Counts pending invites too (they're created as real, inactive User
+      // rows below) — otherwise sending 5 invites at once on a 3-seat plan
+      // would blow past the limit before any of them were even accepted.
+      const seatsUsed = await User.countDocuments({ $or: [{ _id: orgId }, { organizationId: orgId }] });
+      if (seatsUsed >= limits.team_members) {
+        return error(
+          res,
+          `Your ${owner.plan} plan includes ${limits.team_members} team seat${limits.team_members === 1 ? '' : 's'} (including you) — you're using all of them. Upgrade your plan to invite more.`,
+          403
+        );
+      }
+    }
+
+    const inviteToken = crypto.randomBytes(32).toString('hex');
 
     const invitedUser = await User.create({
       name: email.split('@')[0],
