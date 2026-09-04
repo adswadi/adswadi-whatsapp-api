@@ -32,14 +32,20 @@ router.post('/invite', authenticate, authorize('owner', 'admin'), async (req, re
     const { email, role = 'agent' } = req.body;
     if (!email) return error(res, 'Email required', 400);
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) return error(res, 'User already exists', 409);
-
     const orgId = req.user.role === 'owner' ? req.user._id : req.user.organizationId;
     // Billing (and the plan's seat count) lives on the organization owner,
     // not on whichever admin is sending this invite.
     const owner = req.user.role === 'owner' ? req.user : await User.findById(orgId);
     if (!owner) return error(res, 'Organization owner not found', 404);
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    // A removed member's User row still exists (their name stays attached to
+    // messages they sent) — re-inviting the same email should bring them
+    // back, not permanently block that address from ever rejoining. Anyone
+    // else's email (still active here, or a member/owner of a different
+    // organization) is still off-limits.
+    const isReactivation = existing && existing.isRemoved && String(existing.organizationId) === String(orgId);
+    if (existing && !isReactivation) return error(res, 'User already exists', 409);
 
     const limits = await getPlanLimits(owner.plan);
     if (limits.team_members !== -1) {
@@ -62,16 +68,27 @@ router.post('/invite', authenticate, authorize('owner', 'admin'), async (req, re
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
 
-    const invitedUser = await User.create({
-      name: email.split('@')[0],
-      email,
-      password: crypto.randomBytes(16).toString('hex'), // temp password
-      role,
-      organizationId: orgId,
-      inviteToken,
-      invitedBy: req.user._id,
-      isActive: false,
-    });
+    let invitedUser;
+    if (isReactivation) {
+      existing.role = role;
+      existing.password = crypto.randomBytes(16).toString('hex'); // temp password, reset on accept
+      existing.inviteToken = inviteToken;
+      existing.invitedBy = req.user._id;
+      existing.isActive = false;
+      existing.isRemoved = false;
+      invitedUser = await existing.save();
+    } else {
+      invitedUser = await User.create({
+        name: email.split('@')[0],
+        email,
+        password: crypto.randomBytes(16).toString('hex'), // temp password
+        role,
+        organizationId: orgId,
+        inviteToken,
+        invitedBy: req.user._id,
+        isActive: false,
+      });
+    }
 
     await User.findByIdAndUpdate(orgId, { $addToSet: { teamMembers: invitedUser._id } });
 
