@@ -20,6 +20,7 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import RegisterPage from '@/pages/RegisterPage'
 import VerifyEmailPage from '@/pages/VerifyEmailPage'
+import AcceptInvitePage from '@/pages/AcceptInvitePage'
 import OnboardingPage from '@/pages/OnboardingPage'
 import DashboardPage from '@/pages/DashboardPage'
 import InboxPage from '@/pages/InboxPage'
@@ -132,6 +133,12 @@ function App() {
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
+        {/* Not gated by PublicRoute: accepting an invite establishes a new
+            session on its own submit, and should work even if this browser
+            is currently signed into a different account (e.g. the owner
+            previewing their own invite link, or someone invited to a
+            second organization). */}
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
         <Route path="/onboarding" element={<OnboardingPage />} />

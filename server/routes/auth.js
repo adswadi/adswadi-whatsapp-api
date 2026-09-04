@@ -326,6 +326,10 @@ router.post('/accept-invite', async (req, res) => {
     user.password = password;
     user.inviteToken = null;
     user.isActive = true;
+    // The organization-setup wizard (business name, connect WhatsApp, invite
+    // team) is for the owner who created the org — an invited agent is
+    // joining one that's already set up and shouldn't be routed through it.
+    user.onboardingCompleted = true;
     await user.save();
 
     const { accessToken, refreshToken } = generateTokens(user._id);

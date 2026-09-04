@@ -59,6 +59,23 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  acceptInvite: async (token, name, password) => {
+    set({ isLoading: true })
+    try {
+      const response = await api.post('/auth/accept-invite', { token, name, password })
+      const { user, accessToken, refreshToken } = response.data.data
+
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+
+      set({ user, accessToken, refreshToken, isLoading: false, isInitialized: true })
+      return { success: true }
+    } catch (err) {
+      set({ isLoading: false })
+      return { success: false, message: err.response?.data?.message || 'Failed to accept invite' }
+    }
+  },
+
   resendOtp: async (email) => {
     try {
       await api.post('/auth/resend-otp', { email })
