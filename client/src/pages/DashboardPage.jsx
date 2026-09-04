@@ -102,13 +102,13 @@ const DashboardPage = () => {
           icon={TrendingUp}
           color="green"
         />
-        <Link to="/billing">
+        <Link to="/billing" className="block w-full h-full">
           <StatCard
             title="Invoices"
             value={invoiceCount}
             icon={Receipt}
             color="purple"
-            className="hover:border-brand-purple/30 transition-colors cursor-pointer"
+            className="w-full h-full hover:border-brand-purple/30 transition-colors cursor-pointer"
           />
         </Link>
       </div>
