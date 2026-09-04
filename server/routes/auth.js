@@ -46,7 +46,17 @@ router.post('/register', async (req, res) => {
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const user = await User.create({ name, email, password, organizationName: organizationName || name + "'s Team", trialEndsAt });
 
-    await generateAndSendOtp(user);
+    // The account now exists regardless of what happens next — if the email
+    // provider hiccups here, failing the whole request would report
+    // "Registration failed" for an account that was, in fact, created,
+    // while leaving the user with no way to retry except a confusing
+    // "Email already registered" on their next attempt. Log it and let them
+    // continue to the verify screen, where "Resend code" tries again.
+    try {
+      await generateAndSendOtp(user);
+    } catch (otpErr) {
+      console.error('OTP send failed during register (account created, verification pending):', otpErr?.response?.data || otpErr.message);
+    }
 
     return success(res, { email: user.email }, 'Verification code sent to your email', 201);
   } catch (err) {
