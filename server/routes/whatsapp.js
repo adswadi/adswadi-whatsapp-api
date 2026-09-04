@@ -7,6 +7,7 @@ const { encrypt } = require('../utils/encryption');
 const { success, error } = require('../utils/responseHelper');
 const whatsappService = require('../services/whatsappService');
 const { upload } = require('../middleware/upload');
+const { CLIENT_URL } = require('../config/clientUrl');
 const crypto = require('crypto');
 
 // Subscribes our app to the customer's WABA (needed to receive their
@@ -289,7 +290,7 @@ router.post('/embedded-signup', authenticate, async (req, res) => {
     if (!code) return error(res, 'Code is required', 400);
 
     const axios = require('axios');
-    const redirectUri = `${process.env.CLIENT_URL || 'https://app.adswadi.com'}/`;
+    const redirectUri = `${CLIENT_URL}/`;
 
     // Exchange code for a short-lived access token
     const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {

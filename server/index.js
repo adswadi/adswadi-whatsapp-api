@@ -27,7 +27,12 @@ const server = http.createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    // A CORS Origin header from a browser never has a trailing slash, so a
+    // stray one on CLIENT_URL (as happened here) would silently fail every
+    // cross-origin match — stripped the same way config/clientUrl.js does,
+    // just keeping the dev-friendly localhost fallback instead of that
+    // module's production one.
+    origin: (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/+$/, ''),
     methods: ['GET', 'POST'],
     credentials: true,
   },

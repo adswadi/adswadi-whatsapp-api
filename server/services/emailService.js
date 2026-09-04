@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { CLIENT_URL } = require('../config/clientUrl');
 
 // Railway blocks outbound SMTP (port 587), which made nodemailer time out on
 // every send. Resend's API runs over plain HTTPS, so it isn't affected.
@@ -21,8 +22,6 @@ const sendEmail = async ({ to, subject, html, text }) => {
     throw err;
   }
 };
-
-const CLIENT_URL = process.env.CLIENT_URL || 'https://app.adswadi.com';
 
 const sendInviteEmail = async (email, inviterName, inviteToken, organizationName) => {
   const inviteUrl = `${CLIENT_URL}/accept-invite?token=${inviteToken}`;

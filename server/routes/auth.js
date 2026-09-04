@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
 const { validatePassword } = require('../utils/validators');
+const { CLIENT_URL } = require('../config/clientUrl');
 const { sendWelcomeEmail, sendInviteEmail, sendPasswordResetEmail, sendOtpEmail } = require('../services/emailService');
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
@@ -182,7 +183,7 @@ router.post('/forgot-password', async (req, res) => {
       resetPasswordExpires: new Date(Date.now() + 60 * 60 * 1000),
     });
 
-    const resetUrl = `${process.env.CLIENT_URL || 'https://app.adswadi.com'}/reset-password?token=${rawToken}`;
+    const resetUrl = `${CLIENT_URL}/reset-password?token=${rawToken}`;
     sendPasswordResetEmail(email, user.name, resetUrl).catch(() => {});
 
     return success(res, {}, 'If that email is registered, a reset link has been sent');
