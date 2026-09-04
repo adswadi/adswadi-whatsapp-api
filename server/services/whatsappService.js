@@ -105,6 +105,74 @@ const getTemplates = async (waAccount) => {
   return response.data.data || [];
 };
 
+// Submits a template to Meta for review. Approval is asynchronous (minutes
+// to a day) — the caller gets back whatever status Meta assigns immediately
+// (usually PENDING), not a guarantee it's usable yet.
+const createTemplate = async (waAccount, { name, category, language, components }) => {
+  const token = decrypt(waAccount.accessToken);
+  const client = getClient(token);
+  const response = await client.post(`/${waAccount.wabaId}/message_templates`, {
+    name,
+    category,
+    language,
+    components,
+  });
+  return response.data;
+};
+
+const deleteTemplate = async (waAccount, name) => {
+  const token = decrypt(waAccount.accessToken);
+  const client = getClient(token);
+  const response = await client.delete(`/${waAccount.wabaId}/message_templates`, { params: { name } });
+  return response.data;
+};
+
+const BUSINESS_PROFILE_FIELDS = 'about,address,description,email,profile_picture_url,websites,vertical';
+
+const getBusinessProfile = async (waAccount) => {
+  const token = decrypt(waAccount.accessToken);
+  const client = getClient(token);
+  const response = await client.get(`/${waAccount.phoneNumberId}/whatsapp_business_profile`, {
+    params: { fields: BUSINESS_PROFILE_FIELDS },
+  });
+  return response.data.data?.[0] || {};
+};
+
+const updateBusinessProfile = async (waAccount, fields) => {
+  const token = decrypt(waAccount.accessToken);
+  const client = getClient(token);
+  const response = await client.post(`/${waAccount.phoneNumberId}/whatsapp_business_profile`, {
+    messaging_product: 'whatsapp',
+    ...fields,
+  });
+  return response.data;
+};
+
+// Meta requires the photo bytes to be re-hosted on ITS servers first (the
+// "resumable upload" API) before whatsapp_business_profile will accept
+// them — a plain image URL isn't enough. Three calls: open a session sized
+// for this exact file, PUT the bytes into it to get a handle, then point
+// the business profile at that handle.
+const setProfilePhoto = async (waAccount, buffer, mimeType) => {
+  const token = decrypt(waAccount.accessToken);
+
+  const sessionRes = await axios.post(
+    `${META_BASE_URL}/${META_API_VERSION}/${process.env.META_APP_ID}/uploads`,
+    null,
+    { params: { file_length: buffer.length, file_type: mimeType, access_token: token } }
+  );
+  const sessionId = sessionRes.data.id; // already formatted "upload:xxxx"
+
+  const uploadRes = await axios.post(
+    `${META_BASE_URL}/${META_API_VERSION}/${sessionId}`,
+    buffer,
+    { headers: { Authorization: `OAuth ${token}`, file_offset: '0', 'Content-Type': 'application/octet-stream' } }
+  );
+  const handle = uploadRes.data.h;
+
+  return updateBusinessProfile(waAccount, { profile_picture_handle: handle });
+};
+
 const getPhoneNumbers = async (wabaId, accessToken) => {
   const client = getClient(accessToken);
   const response = await client.get(`/${wabaId}/phone_numbers`);
@@ -157,6 +225,11 @@ module.exports = {
   sendInteractiveMessage,
   markMessageRead,
   getTemplates,
+  createTemplate,
+  deleteTemplate,
+  getBusinessProfile,
+  updateBusinessProfile,
+  setProfilePhoto,
   getPhoneNumbers,
   uploadMedia,
   getMediaUrl,

@@ -6,6 +6,7 @@ const { requireActiveSubscription } = require('../middleware/subscription');
 const { encrypt } = require('../utils/encryption');
 const { success, error } = require('../utils/responseHelper');
 const whatsappService = require('../services/whatsappService');
+const { upload } = require('../middleware/upload');
 const crypto = require('crypto');
 
 // Subscribes our app to the customer's WABA (needed to receive their
@@ -138,6 +139,122 @@ router.get('/accounts/:id/templates', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Templates fetch error:', err);
     return error(res, 'Failed to fetch templates', 500);
+  }
+});
+
+// POST /api/whatsapp/accounts/:id/templates — submit a new template to Meta for review
+router.post('/accounts/:id/templates', authenticate, async (req, res) => {
+  try {
+    const account = await WhatsAppAccount.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!account) return error(res, 'Account not found', 404);
+
+    const { name, category, language, header, body, bodyExamples, footer } = req.body;
+    if (!name || !category || !language || !body) {
+      return error(res, 'Name, category, language and body text are required', 400);
+    }
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      return error(res, 'Template name can only contain lowercase letters, numbers and underscores', 400);
+    }
+
+    const components = [];
+    if (header?.trim()) {
+      components.push({ type: 'HEADER', format: 'TEXT', text: header.trim() });
+    }
+
+    const bodyComponent = { type: 'BODY', text: body };
+    // Meta requires a real example for every {{n}} placeholder before it will
+    // review a template — without this the submission is rejected outright.
+    const hasVariables = /\{\{\d+\}\}/.test(body);
+    if (hasVariables) {
+      const examples = (bodyExamples || []).filter((e) => e && e.trim());
+      if (examples.length === 0) {
+        return error(res, 'Provide an example value for each {{variable}} in the body text', 400);
+      }
+      bodyComponent.example = { body_text: [examples] };
+    }
+    components.push(bodyComponent);
+
+    if (footer?.trim()) {
+      components.push({ type: 'FOOTER', text: footer.trim() });
+    }
+
+    const result = await whatsappService.createTemplate(account, {
+      name: name.trim(),
+      category,
+      language,
+      components,
+    });
+    return success(res, { template: result }, 'Template submitted to Meta for review', 201);
+  } catch (err) {
+    console.error('Template create error:', err?.response?.data || err.message);
+    return error(res, err?.response?.data?.error?.error_user_msg || err?.response?.data?.error?.message || 'Failed to create template', 500);
+  }
+});
+
+// DELETE /api/whatsapp/accounts/:id/templates/:name
+router.delete('/accounts/:id/templates/:name', authenticate, async (req, res) => {
+  try {
+    const account = await WhatsAppAccount.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!account) return error(res, 'Account not found', 404);
+
+    await whatsappService.deleteTemplate(account, req.params.name);
+    return success(res, {}, 'Template deleted');
+  } catch (err) {
+    console.error('Template delete error:', err?.response?.data || err.message);
+    return error(res, err?.response?.data?.error?.message || 'Failed to delete template', 500);
+  }
+});
+
+// GET /api/whatsapp/accounts/:id/business-profile
+router.get('/accounts/:id/business-profile', authenticate, async (req, res) => {
+  try {
+    const account = await WhatsAppAccount.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!account) return error(res, 'Account not found', 404);
+
+    const profile = await whatsappService.getBusinessProfile(account);
+    return success(res, { profile });
+  } catch (err) {
+    console.error('Business profile fetch error:', err?.response?.data || err.message);
+    return error(res, 'Failed to fetch business profile', 500);
+  }
+});
+
+// PUT /api/whatsapp/accounts/:id/business-profile
+router.put('/accounts/:id/business-profile', authenticate, async (req, res) => {
+  try {
+    const account = await WhatsAppAccount.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!account) return error(res, 'Account not found', 404);
+
+    const { about, description, address, email, websites, vertical } = req.body;
+    const fields = {};
+    if (about !== undefined) fields.about = about;
+    if (description !== undefined) fields.description = description;
+    if (address !== undefined) fields.address = address;
+    if (email !== undefined) fields.email = email;
+    if (vertical !== undefined) fields.vertical = vertical;
+    if (websites !== undefined) fields.websites = (websites || []).filter((w) => w && w.trim()).slice(0, 2);
+
+    await whatsappService.updateBusinessProfile(account, fields);
+    return success(res, {}, 'Business profile updated');
+  } catch (err) {
+    console.error('Business profile update error:', err?.response?.data || err.message);
+    return error(res, err?.response?.data?.error?.error_user_msg || 'Failed to update business profile', 500);
+  }
+});
+
+// POST /api/whatsapp/accounts/:id/business-profile/photo
+router.post('/accounts/:id/business-profile/photo', authenticate, upload.single('photo'), async (req, res) => {
+  try {
+    const account = await WhatsAppAccount.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!account) return error(res, 'Account not found', 404);
+    if (!req.file) return error(res, 'No photo uploaded', 400);
+    if (!req.file.mimetype.startsWith('image/')) return error(res, 'Profile photo must be an image', 400);
+
+    await whatsappService.setProfilePhoto(account, req.file.buffer, req.file.mimetype);
+    return success(res, {}, 'Profile photo updated');
+  } catch (err) {
+    console.error('Profile photo update error:', err?.response?.data || err.message);
+    return error(res, err?.response?.data?.error?.error_user_msg || 'Failed to update profile photo', 500);
   }
 });
 

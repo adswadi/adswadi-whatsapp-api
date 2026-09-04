@@ -1,13 +1,126 @@
 import { useEffect, useState } from 'react'
-import { FileText, RefreshCw, Eye, Search, AlertCircle } from 'lucide-react'
+import { FileText, RefreshCw, Eye, Search, AlertCircle, Plus, Trash2 } from 'lucide-react'
 import api from '@/lib/api'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Card, CardContent } from '@/components/ui/Card'
-import Modal from '@/components/ui/Modal'
+import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal'
+import Input, { Textarea } from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
 import TemplatePreview from '@/components/templates/TemplatePreview'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+
+const CATEGORY_OPTIONS = [
+  { value: 'MARKETING', label: 'Marketing' },
+  { value: 'UTILITY', label: 'Utility' },
+  { value: 'AUTHENTICATION', label: 'Authentication' },
+]
+
+const LANGUAGE_OPTIONS = [
+  { value: 'en_US', label: 'English (US)' },
+  { value: 'en', label: 'English' },
+  { value: 'hi', label: 'Hindi' },
+]
+
+const EMPTY_TEMPLATE = { name: '', category: 'MARKETING', language: 'en_US', header: '', body: '', footer: '' }
+
+const extractVariables = (text) => {
+  const matches = [...(text || '').matchAll(/\{\{(\d+)\}\}/g)]
+  return [...new Set(matches.map((m) => Number(m[1])))].sort((a, b) => a - b)
+}
+
+const CreateTemplateModal = ({ isOpen, onClose, onCreated, accountId }) => {
+  const [form, setForm] = useState(EMPTY_TEMPLATE)
+  const [examples, setExamples] = useState({})
+  const [saving, setSaving] = useState(false)
+
+  const variables = extractVariables(form.body)
+
+  const reset = () => { setForm(EMPTY_TEMPLATE); setExamples({}) }
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.body.trim()) {
+      toast.error('Template name and body text are required')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post(`/whatsapp/accounts/${accountId}/templates`, {
+        name: form.name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+        category: form.category,
+        language: form.language,
+        header: form.header,
+        body: form.body,
+        footer: form.footer,
+        bodyExamples: variables.map((v) => examples[v] || ''),
+      })
+      toast.success('Template submitted to Meta for review')
+      reset()
+      onCreated()
+      onClose()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create template')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={() => { reset(); onClose() }} title="Create Template" size="md">
+      <ModalBody className="space-y-4">
+        <Input
+          label="Template Name"
+          placeholder="e.g. order_confirmation"
+          hint="Lowercase letters, numbers and underscores only"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <Select label="Category" options={CATEGORY_OPTIONS} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          <Select label="Language" options={LANGUAGE_OPTIONS} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} />
+        </div>
+        <Input
+          label="Header (optional)"
+          placeholder="e.g. Order Update"
+          value={form.header}
+          onChange={(e) => setForm({ ...form, header: e.target.value })}
+        />
+        <Textarea
+          label="Body"
+          placeholder={'Hi {{1}}, your order #{{2}} has been shipped!'}
+          hint="Use {{1}}, {{2}}... for variables that change per message"
+          rows={4}
+          value={form.body}
+          onChange={(e) => setForm({ ...form, body: e.target.value })}
+        />
+        {variables.length > 0 && (
+          <div className="space-y-2 bg-gray-50 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-500">Example values (required by Meta for review)</p>
+            {variables.map((v) => (
+              <Input
+                key={v}
+                placeholder={`Example for {{${v}}}`}
+                value={examples[v] || ''}
+                onChange={(e) => setExamples({ ...examples, [v]: e.target.value })}
+              />
+            ))}
+          </div>
+        )}
+        <Input
+          label="Footer (optional)"
+          placeholder="e.g. Reply STOP to unsubscribe"
+          value={form.footer}
+          onChange={(e) => setForm({ ...form, footer: e.target.value })}
+        />
+        <p className="text-xs text-gray-400">Buttons and media headers aren't supported yet — text-only templates for now.</p>
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={() => { reset(); onClose() }}>Cancel</Button>
+        <Button variant="gradient" loading={saving} onClick={handleSubmit}>Submit for Review</Button>
+      </ModalFooter>
+    </Modal>
+  )
+}
 
 const STATUS_VARIANT = {
   APPROVED: 'green',
@@ -30,6 +143,8 @@ const TemplatesPage = () => {
   const [search, setSearch] = useState('')
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [showCreate, setShowCreate] = useState(false)
+  const [deletingName, setDeletingName] = useState(null)
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -69,6 +184,19 @@ const TemplatesPage = () => {
 
   const categories = ['ALL', ...new Set(templates.map((t) => t.category).filter(Boolean))]
 
+  const handleDelete = async (name) => {
+    if (!selectedAccount || !window.confirm(`Delete template "${name}"? This can't be undone.`)) return
+    setDeletingName(name)
+    try {
+      await api.delete(`/whatsapp/accounts/${selectedAccount._id}/templates/${encodeURIComponent(name)}`)
+      toast.success('Template deleted')
+      fetchTemplates()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete template')
+    }
+    setDeletingName(null)
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -80,6 +208,15 @@ const TemplatesPage = () => {
         <div className="flex gap-3">
           <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={14} />} onClick={fetchTemplates} loading={loading}>
             Refresh
+          </Button>
+          <Button
+            variant="gradient"
+            size="sm"
+            leftIcon={<Plus size={14} />}
+            disabled={!selectedAccount}
+            onClick={() => setShowCreate(true)}
+          >
+            New Template
           </Button>
         </div>
       </div>
@@ -201,14 +338,24 @@ const TemplatesPage = () => {
 
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">{template.language}</span>
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          leftIcon={<Eye size={11} />}
-                          onClick={() => setPreviewTemplate(template)}
-                        >
-                          Preview
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            leftIcon={<Eye size={11} />}
+                            onClick={() => setPreviewTemplate(template)}
+                          >
+                            Preview
+                          </Button>
+                          <button
+                            onClick={() => handleDelete(template.name)}
+                            disabled={deletingName === template.name}
+                            className="p-1.5 hover:bg-red-50 text-red-400 rounded-lg disabled:opacity-50 transition-colors"
+                            title="Delete template"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -217,6 +364,16 @@ const TemplatesPage = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Create Template Modal */}
+      {selectedAccount && (
+        <CreateTemplateModal
+          isOpen={showCreate}
+          onClose={() => setShowCreate(false)}
+          onCreated={fetchTemplates}
+          accountId={selectedAccount._id}
+        />
       )}
 
       {/* Preview Modal */}
