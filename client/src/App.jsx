@@ -19,6 +19,7 @@ import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import RegisterPage from '@/pages/RegisterPage'
+import VerifyEmailPage from '@/pages/VerifyEmailPage'
 import OnboardingPage from '@/pages/OnboardingPage'
 import DashboardPage from '@/pages/DashboardPage'
 import InboxPage from '@/pages/InboxPage'
@@ -130,6 +131,7 @@ function App() {
         <Route path="/template-library" element={<TemplateLibraryPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
         <Route path="/onboarding" element={<OnboardingPage />} />

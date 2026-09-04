@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  MessageSquare, Users, Megaphone, BarChart2,
+  MessageSquare, Users, Megaphone, BarChart2, Receipt,
   ArrowRight, TrendingUp, AlertCircle, CheckCircle2, Clock
 } from 'lucide-react'
 import {
@@ -19,19 +19,22 @@ const DashboardPage = () => {
   const [overview, setOverview] = useState(null)
   const [chartData, setChartData] = useState([])
   const [broadcasts, setBroadcasts] = useState([])
+  const [invoiceCount, setInvoiceCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ovRes, chartRes, bcastRes] = await Promise.all([
+        const [ovRes, chartRes, bcastRes, invRes] = await Promise.all([
           api.get('/analytics/overview?period=30d'),
           api.get('/analytics/messages-chart?period=30d'),
           api.get('/broadcasts?limit=5'),
+          api.get('/billing/invoices'),
         ])
         setOverview(ovRes.data.data)
         setChartData(chartRes.data.data.chart || [])
         setBroadcasts(bcastRes.data.data || [])
+        setInvoiceCount((invRes.data.data.invoices || []).length)
       } catch (err) {
         console.error('Dashboard fetch error:', err)
       } finally {
@@ -72,7 +75,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Contacts"
           value={overview?.contacts?.total || 0}
@@ -99,6 +102,15 @@ const DashboardPage = () => {
           icon={TrendingUp}
           color="green"
         />
+        <Link to="/billing">
+          <StatCard
+            title="Invoices"
+            value={invoiceCount}
+            icon={Receipt}
+            color="purple"
+            className="hover:border-brand-purple/30 transition-colors cursor-pointer"
+          />
+        </Link>
       </div>
 
       {/* Charts + Quick actions */}

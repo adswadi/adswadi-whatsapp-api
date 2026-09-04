@@ -25,7 +25,11 @@ const RegisterPage = () => {
     if (!form.email) errs.email = 'Email is required'
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email'
     if (!form.password) errs.password = 'Password is required'
-    else if (form.password.length < 6) errs.password = 'Minimum 6 characters'
+    else if (form.password.length < 8) errs.password = 'At least 8 characters'
+    else if (!/[a-z]/.test(form.password)) errs.password = 'Add a lowercase letter'
+    else if (!/[A-Z]/.test(form.password)) errs.password = 'Add an uppercase letter'
+    else if (!/\d/.test(form.password)) errs.password = 'Add a number'
+    else if (!/[^A-Za-z0-9]/.test(form.password)) errs.password = 'Add a special character'
     if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -43,8 +47,8 @@ const RegisterPage = () => {
     })
 
     if (result.success) {
-      toast.success('Account created! Let\'s get you set up.')
-      navigate('/onboarding')
+      toast.success('Verification code sent to your email')
+      navigate('/verify-email', { state: { email: result.email || form.email } })
     } else {
       toast.error(result.message || 'Registration failed')
     }
@@ -97,10 +101,11 @@ const RegisterPage = () => {
             <Input
               label="Password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Min. 6 characters"
+              placeholder="Min. 8 characters"
               value={form.password}
               onChange={update('password')}
               error={errors.password}
+              hint={!errors.password ? '8+ characters, with upper, lower, number & special character' : undefined}
               leftIcon={<Lock size={16} />}
               rightIcon={
                 <button type="button" onClick={() => setShowPassword(!showPassword)}>

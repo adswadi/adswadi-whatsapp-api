@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
     plan: { type: String, enum: ['free', 'starter', 'growth', 'enterprise'], default: 'free' },
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
+    emailOtp: { type: String, default: null },
+    emailOtpExpires: { type: Date, default: null },
     organizationName: { type: String, default: '' },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     teamMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

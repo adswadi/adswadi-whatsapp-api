@@ -19,7 +19,10 @@ const ResetPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!token) return toast.error('Missing or invalid reset link')
-    if (password.length < 6) return toast.error('Password must be at least 6 characters')
+    if (password.length < 8) return toast.error('Password must be at least 8 characters')
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      return toast.error('Password must include upper, lower, number & special character')
+    }
     if (password !== confirm) return toast.error('Passwords do not match')
 
     setLoading(true)
@@ -54,7 +57,7 @@ const ResetPasswordPage = () => {
               <Input
                 label="New Password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 leftIcon={<Lock size={16} />}

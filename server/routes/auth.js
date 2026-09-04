@@ -5,7 +5,18 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
-const { sendWelcomeEmail, sendInviteEmail, sendPasswordResetEmail } = require('../services/emailService');
+const { validatePassword } = require('../utils/validators');
+const { sendWelcomeEmail, sendInviteEmail, sendPasswordResetEmail, sendOtpEmail } = require('../services/emailService');
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
+const generateAndSendOtp = async (user) => {
+  const otp = crypto.randomInt(100000, 999999).toString();
+  user.emailOtp = crypto.createHash('sha256').update(otp).digest('hex');
+  user.emailOtpExpires = new Date(Date.now() + OTP_EXPIRY_MS);
+  await user.save();
+  await sendOtpEmail(user.email, user.name, otp);
+};
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -17,7 +28,8 @@ const generateTokens = (userId) => {
   return { accessToken, refreshToken };
 };
 
-// POST /api/auth/register
+// POST /api/auth/register — creates the account but withholds login tokens
+// until the email is verified via /verify-email below.
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, organizationName } = req.body;
@@ -25,6 +37,8 @@ router.post('/register', async (req, res) => {
     if (!name || !email || !password) {
       return error(res, 'Name, email, and password are required', 400);
     }
+    const passwordError = validatePassword(password);
+    if (passwordError) return error(res, passwordError, 400);
 
     const existing = await User.findOne({ email });
     if (existing) return error(res, 'Email already registered', 409);
@@ -32,16 +46,74 @@ router.post('/register', async (req, res) => {
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const user = await User.create({ name, email, password, organizationName: organizationName || name + "'s Team", trialEndsAt });
 
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    await generateAndSendOtp(user);
 
-    await User.findByIdAndUpdate(user._id, { refreshToken, lastLogin: new Date() });
-
-    sendWelcomeEmail(email, name).catch(() => {});
-
-    return success(res, { user, accessToken, refreshToken }, 'Registration successful', 201);
+    return success(res, { email: user.email }, 'Verification code sent to your email', 201);
   } catch (err) {
     console.error('Register error:', err);
     return error(res, 'Registration failed', 500);
+  }
+});
+
+// POST /api/auth/verify-email — completes registration: checks the OTP,
+// marks the account verified, and only now issues login tokens.
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return error(res, 'Email and verification code are required', 400);
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user || !user.emailOtp || !user.emailOtpExpires) {
+      return error(res, 'Invalid or expired verification code', 400);
+    }
+    if (user.emailOtpExpires < new Date()) {
+      return error(res, 'Verification code has expired. Request a new one.', 400);
+    }
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    if (hashedOtp !== user.emailOtp) {
+      return error(res, 'Incorrect verification code', 400);
+    }
+
+    user.isEmailVerified = true;
+    user.emailOtp = null;
+    user.emailOtpExpires = null;
+
+    const { accessToken, refreshToken } = generateTokens(user._id);
+    user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
+    await user.save();
+
+    sendWelcomeEmail(user.email, user.name).catch(() => {});
+
+    return success(res, { user, accessToken, refreshToken }, 'Email verified');
+  } catch (err) {
+    console.error('Verify email error:', err);
+    return error(res, 'Failed to verify email', 500);
+  }
+});
+
+// POST /api/auth/resend-otp
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return error(res, 'Email is required', 400);
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return error(res, 'No pending signup found for this email', 404);
+    if (user.isEmailVerified) return error(res, 'This email is already verified — please log in', 400);
+
+    // A code issued less than a minute ago is still fresh — resending
+    // immediately would just let someone spam the inbox (and Resend's API).
+    const issuedAt = user.emailOtpExpires ? new Date(user.emailOtpExpires.getTime() - OTP_EXPIRY_MS) : null;
+    if (issuedAt && Date.now() - issuedAt.getTime() < 60 * 1000) {
+      return error(res, 'Please wait a minute before requesting another code', 429);
+    }
+
+    await generateAndSendOtp(user);
+    return success(res, {}, 'Verification code resent');
+  } catch (err) {
+    console.error('Resend OTP error:', err);
+    return error(res, 'Failed to resend code', 500);
   }
 });
 
@@ -115,7 +187,8 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return error(res, 'Token and new password are required', 400);
-    if (password.length < 6) return error(res, 'Password must be at least 6 characters', 400);
+    const passwordError = validatePassword(password);
+    if (passwordError) return error(res, passwordError, 400);
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await User.findOne({
@@ -207,6 +280,9 @@ router.put('/change-password', authenticate, async (req, res) => {
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) return error(res, 'Current password incorrect', 400);
 
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) return error(res, passwordError, 400);
+
     user.password = newPassword;
     await user.save();
 
@@ -232,6 +308,9 @@ router.post('/accept-invite', async (req, res) => {
     const { token, name, password } = req.body;
     const user = await User.findOne({ inviteToken: token });
     if (!user) return error(res, 'Invalid or expired invite token', 400);
+
+    const passwordError = validatePassword(password);
+    if (passwordError) return error(res, passwordError, 400);
 
     user.name = name;
     user.password = password;

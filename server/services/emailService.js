@@ -98,4 +98,30 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
   });
 };
 
-module.exports = { sendEmail, sendInviteEmail, sendWelcomeEmail, sendPasswordResetEmail };
+const sendOtpEmail = async (email, name, otp) => {
+  await sendEmail({
+    to: email,
+    subject: `${otp} is your Adswadi verification code`,
+    html: `
+      <div style="font-family: 'DM Sans', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(90deg, #7B2FBE, #4A6CF7, #E91E8C); padding: 3px; border-radius: 12px;">
+          <div style="background: white; border-radius: 10px; padding: 40px; text-align: center;">
+            <h1 style="color: #7B2FBE; font-size: 22px; margin-bottom: 8px;">Verify your email</h1>
+            <p style="color: #444; font-size: 15px; margin-bottom: 24px;">
+              Hi ${name}, enter this code to confirm ${email} is yours.
+            </p>
+            <div style="display: inline-block; background: #F5F0FF; border-radius: 12px; padding: 16px 32px; letter-spacing: 8px; font-size: 32px; font-weight: 800; color: #1A0A2E; font-family: monospace;">
+              ${otp}
+            </div>
+            <p style="color: #888; font-size: 13px; margin-top: 24px;">
+              This code expires in 10 minutes. If you didn't create an Adswadi account, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+    text: `Your Adswadi verification code is ${otp}. It expires in 10 minutes.`,
+  });
+};
+
+module.exports = { sendEmail, sendInviteEmail, sendWelcomeEmail, sendPasswordResetEmail, sendOtpEmail };
