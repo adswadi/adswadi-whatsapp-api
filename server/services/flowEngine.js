@@ -1,8 +1,44 @@
 const Flow = require('../models/Flow');
 const Conversation = require('../models/Conversation');
 const Contact = require('../models/Contact');
+const Message = require('../models/Message');
 const whatsappService = require('./whatsappService');
 const WhatsAppAccount = require('../models/WhatsAppAccount');
+
+// Flow steps send straight to Meta without ever going through the
+// conversations routes, so nothing wrote a Message row, touched the
+// conversation preview, or told the open dashboard tab a message went out —
+// the customer received it, but it never existed on our side.
+const saveOutboundMessage = async (conversation, waAccount, type, content, waMessageId) => {
+  const message = await Message.create({
+    conversationId: conversation._id,
+    userId: conversation.userId,
+    waMessageId: waMessageId || null,
+    direction: 'outbound',
+    from: waAccount.phoneNumber,
+    to: conversation.phoneNumber,
+    type,
+    content,
+    status: 'sent',
+    statusTimestamps: { sent: new Date() },
+  });
+
+  await Conversation.findByIdAndUpdate(conversation._id, {
+    lastMessage: {
+      text: content.text || `[${type}]`,
+      type,
+      timestamp: new Date(),
+      fromContact: false,
+    },
+    status: 'open',
+  });
+
+  if (global.io) {
+    global.io.to(`user_${conversation.userId}`).emit('new_message', { conversationId: conversation._id, message });
+  }
+
+  return message;
+};
 
 const matchTrigger = (flow, message, conversation, isNewConversation) => {
   const trigger = flow.trigger;
@@ -34,17 +70,25 @@ const executeStep = async (step, conversation, contact, waAccount) => {
     switch (step.type) {
       case 'send_message': {
         const text = interpolateVariables(step.config.text || '', contact);
-        await whatsappService.sendTextMessage(waAccount, conversation.phoneNumber, text);
+        const result = await whatsappService.sendTextMessage(waAccount, conversation.phoneNumber, text);
+        await saveOutboundMessage(conversation, waAccount, 'text', { text }, result?.messages?.[0]?.id);
         break;
       }
 
       case 'send_template': {
-        await whatsappService.sendTemplateMessage(
+        const result = await whatsappService.sendTemplateMessage(
           waAccount,
           conversation.phoneNumber,
           step.config.templateName,
           step.config.language || 'en',
           step.config.components || []
+        );
+        await saveOutboundMessage(
+          conversation,
+          waAccount,
+          'template',
+          { templateName: step.config.templateName, templateData: step.config.components },
+          result?.messages?.[0]?.id
         );
         break;
       }
@@ -140,10 +184,17 @@ const processIncomingMessage = async (userId, message, conversation, isNewConver
         });
         await Flow.findByIdAndUpdate(flow._id, { $inc: { 'stats.triggered': 1 } });
 
-        // Execute first step
-        const firstStep = flow.steps.find((s) => s.order === 0);
-        if (firstStep) {
-          await executeStep(firstStep, conversation, contact, waAccount);
+        // Walk the chain from the first step — this used to run only the
+        // first step and stop, since executeStep's returned nextStepId was
+        // never looked up and re-executed. A "send welcome, then tag" flow
+        // silently never got past "send welcome".
+        let currentStep = flow.steps.find((s) => s.order === 0);
+        const visited = new Set();
+        while (currentStep && !visited.has(currentStep.id)) {
+          visited.add(currentStep.id); // guards against a misconfigured cycle
+          const nextStepId = await executeStep(currentStep, conversation, contact, waAccount);
+          if (!nextStepId) break;
+          currentStep = flow.steps.find((s) => s.id === nextStepId);
         }
         break;
       }
