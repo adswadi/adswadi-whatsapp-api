@@ -22,8 +22,10 @@ const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
+const CLIENT_URL = process.env.CLIENT_URL || 'https://app.adswadi.com';
+
 const sendInviteEmail = async (email, inviterName, inviteToken, organizationName) => {
-  const inviteUrl = `${process.env.CLIENT_URL}/accept-invite?token=${inviteToken}`;
+  const inviteUrl = `${CLIENT_URL}/accept-invite?token=${inviteToken}`;
 
   await sendEmail({
     to: email,
@@ -61,13 +63,13 @@ const sendWelcomeEmail = async (email, name) => {
         <p style="color: #444; font-size: 16px;">
           Your account is ready. Start growing your business with WhatsApp Marketing today.
         </p>
-        <a href="${process.env.CLIENT_URL}/onboarding"
+        <a href="${CLIENT_URL}/onboarding"
            style="display: inline-block; background: linear-gradient(90deg, #7B2FBE, #4A6CF7); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
           Get Started
         </a>
       </div>
     `,
-    text: `Welcome ${name}! Visit ${process.env.CLIENT_URL}/onboarding to get started.`,
+    text: `Welcome ${name}! Visit ${CLIENT_URL}/onboarding to get started.`,
   }); } catch (_) {}
 };
 
