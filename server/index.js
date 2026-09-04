@@ -144,8 +144,21 @@ const path = require('path');
 const fs = require('fs');
 const clientDistPath = path.join(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {
-  app.use(express.static(clientDistPath));
+  // Vite's hashed filenames (index-XXXXXX.js) are safe to cache forever —
+  // a new build gets a new hash. index.html is what points at that hash,
+  // so it must never be cached: an old cached index.html keeps loading the
+  // JS bundle from before a deploy, silently serving stale code (e.g. a
+  // route that didn't exist yet) even though the server has the new build.
+  app.use(express.static(clientDistPath, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  }));
   app.get('*', (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 } else {
