@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/auth');
 const { checkContactLimit } = require('../middleware/planLimits');
 const { upload, handleUpload } = require('../middleware/upload');
 const { success, error, paginated } = require('../utils/responseHelper');
+const { normalizePhone } = require('../utils/phone');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 
@@ -83,13 +84,18 @@ router.post('/', authenticate, checkContactLimit, async (req, res) => {
     const { name, phone, email, tags, customFields, notes, source } = req.body;
     if (!name || !phone) return error(res, 'Name and phone are required', 400);
 
-    const existing = await Contact.findOne({ userId: req.user._id, phone });
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return error(res, 'Phone number is not valid', 400);
+
+    // Matching on the normalized number also stops "9304595002" and
+    // "+91 93045 95002" from being saved as two separate contacts.
+    const existing = await Contact.findOne({ userId: req.user._id, phone: normalizedPhone });
     if (existing) return error(res, 'Contact with this phone already exists', 409);
 
     const contact = await Contact.create({
       userId: req.user._id,
       name,
-      phone,
+      phone: normalizedPhone,
       email,
       tags: tags || [],
       customFields: customFields || {},
@@ -108,6 +114,11 @@ router.put('/:id', authenticate, async (req, res) => {
   try {
     const updates = req.body;
     delete updates.userId;
+    if (updates.phone !== undefined) {
+      const normalizedPhone = normalizePhone(updates.phone);
+      if (!normalizedPhone) return error(res, 'Phone number is not valid', 400);
+      updates.phone = normalizedPhone;
+    }
 
     const contact = await Contact.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
@@ -157,17 +168,18 @@ router.post('/import', authenticate, upload.single('file'), handleUpload, async 
       stream
         .pipe(csv())
         .on('data', (row) => {
-          if (row.phone && row.name) {
+          const phone = normalizePhone(row.phone);
+          if (phone && row.name) {
             results.push({
               userId: req.user._id,
               name: row.name?.trim(),
-              phone: row.phone?.trim(),
+              phone,
               email: row.email?.trim() || '',
               tags: row.tags ? row.tags.split('|').map((t) => t.trim()) : [],
               source: 'import',
             });
           } else {
-            errors.push(`Row missing name or phone: ${JSON.stringify(row)}`);
+            errors.push(`Row missing name or valid phone: ${JSON.stringify(row)}`);
           }
         })
         .on('end', resolve)

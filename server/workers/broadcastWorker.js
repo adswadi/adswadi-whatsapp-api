@@ -5,6 +5,7 @@ const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const WhatsAppAccount = require('../models/WhatsAppAccount');
 const whatsappService = require('../services/whatsappService');
+const { normalizePhone } = require('../utils/phone');
 
 const broadcastQueue = new Bull('broadcast', {
   redis: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -91,23 +92,29 @@ broadcastQueue.process('send-broadcast', 5, async (job) => {
     const currentBroadcast = await Broadcast.findById(broadcastId).select('status');
     if (currentBroadcast?.status === 'cancelled') break;
 
+    // Contacts saved before phone normalization existed (or edited straight
+    // in the database) can still hold a local-format number. Meta accepts a
+    // send to one of those and returns a message id — it just never
+    // delivers — so normalize here too rather than only at import time.
+    const phone = normalizePhone(contact.phone) || contact.phone;
+
     try {
       const result = await whatsappService.sendTemplateMessage(
         waAccount,
-        contact.phone,
+        phone,
         broadcast.templateName,
         broadcast.templateLanguage,
         broadcast.templateComponents
       );
 
       // Find or create conversation
-      let conversation = await Conversation.findOne({ userId, phoneNumber: contact.phone });
+      let conversation = await Conversation.findOne({ userId, phoneNumber: phone });
       if (!conversation) {
         conversation = await Conversation.create({
           userId,
           contactId: contact._id,
           waAccountId: waAccount._id,
-          phoneNumber: contact.phone,
+          phoneNumber: phone,
         });
       }
 
@@ -118,7 +125,7 @@ broadcastQueue.process('send-broadcast', 5, async (job) => {
         waMessageId: result.messages?.[0]?.id || null,
         direction: 'outbound',
         from: waAccount.phoneNumber,
-        to: contact.phone,
+        to: phone,
         type: 'template',
         content: {
           templateName: broadcast.templateName,
@@ -133,10 +140,10 @@ broadcastQueue.process('send-broadcast', 5, async (job) => {
       await Broadcast.findByIdAndUpdate(broadcastId, { $inc: { 'stats.sent': 1 } });
     } catch (err) {
       failed++;
-      console.error(`Broadcast send failed for ${contact.phone}:`, err.message);
+      console.error(`Broadcast send failed for ${phone}:`, err?.response?.data?.error?.message || err.message);
       await Broadcast.findByIdAndUpdate(broadcastId, {
         $inc: { 'stats.failed': 1 },
-        $push: { errorLog: { message: `Failed for ${contact.phone}: ${err.message}`, timestamp: new Date() } },
+        $push: { errorLog: { message: `Failed for ${phone}: ${err?.response?.data?.error?.message || err.message}`, timestamp: new Date() } },
       });
     }
 
