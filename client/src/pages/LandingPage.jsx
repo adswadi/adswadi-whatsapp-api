@@ -583,7 +583,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap gap-3 mb-10 fu4">
                 <Link to="/register">
                   <button className="flex items-center gap-2 font-bold text-white px-8 py-4 rounded-2xl shadow-lg text-base hover:opacity-90 transition-all" style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}>
-                    Start 14-Day FREE Trial <ArrowRight size={18}/>
+                    Start 7-Day FREE Trial <ArrowRight size={18}/>
                   </button>
                 </Link>
                 <button className="flex items-center gap-2 bg-white text-gray-700 font-semibold px-6 py-4 rounded-2xl border border-gray-200 hover:border-brand-purple hover:text-brand-purple transition-all text-sm shadow-sm">
@@ -1004,7 +1004,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap gap-4 justify-center">
             <Link to="/register">
               <button className="flex items-center gap-2 font-bold text-white px-10 py-4 rounded-2xl text-lg shadow-xl hover:opacity-90 transition-all" style={{background:'linear-gradient(135deg,#7B2FBE,#E91E8C)'}}>
-                Start 14-Day FREE Trial <ArrowRight size={20}/>
+                Start 7-Day FREE Trial <ArrowRight size={20}/>
               </button>
             </Link>
             <button className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all border border-white/20">
