@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Zap, CheckCircle, ArrowRight, ArrowLeft, Phone, Key, Building, Users } from 'lucide-react'
 import useAuthStore from '@/store/authStore'
 import api from '@/lib/api'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Modal from '@/components/ui/Modal'
 import toast from 'react-hot-toast'
 
 const STEPS = [
@@ -14,11 +15,28 @@ const STEPS = [
   { id: 4, title: "You're All Set!", icon: CheckCircle, description: 'Start using Adswadi' },
 ]
 
+const WELCOME_VIDEO_ID = '1MoDY0IIvAA'
+
 const OnboardingPage = () => {
   const navigate = useNavigate()
   const { user, fetchMe } = useAuthStore()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+
+  // Shown once per account, right when onboarding first loads — a
+  // localStorage flag keyed by user id survives a refresh mid-onboarding
+  // without needing a backend field just for this.
+  useEffect(() => {
+    if (!user?._id) return
+    const key = `adswadi_welcome_video_seen_${user._id}`
+    if (!localStorage.getItem(key)) setShowVideoModal(true)
+  }, [user?._id])
+
+  const dismissVideoModal = () => {
+    if (user?._id) localStorage.setItem(`adswadi_welcome_video_seen_${user._id}`, '1')
+    setShowVideoModal(false)
+  }
 
   const [businessData, setBusinessData] = useState({
     organizationName: user?.organizationName || '',
@@ -318,6 +336,21 @@ const OnboardingPage = () => {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showVideoModal} onClose={dismissVideoModal} title="Watch Video To Apply Adswadi WhatsApp API" size="lg">
+        <div className="p-6">
+          <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ paddingTop: '56.25%' }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${WELCOME_VIDEO_ID}`}
+              title="How to apply for Adswadi WhatsApp API"
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              frameBorder="0"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
