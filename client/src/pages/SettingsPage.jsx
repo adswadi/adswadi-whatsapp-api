@@ -4,40 +4,18 @@ import api from '@/lib/api'
 import useAuthStore from '@/store/authStore'
 import Button from '@/components/ui/Button'
 import Input, { Textarea } from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
-const VERTICAL_OPTIONS = [
-  { value: 'UNDEFINED', label: 'Not specified' },
-  { value: 'RETAIL', label: 'Retail' },
-  { value: 'APPAREL', label: 'Clothing & Apparel' },
-  { value: 'AUTO', label: 'Automotive' },
-  { value: 'BEAUTY', label: 'Beauty, Spa & Salon' },
-  { value: 'EDU', label: 'Education' },
-  { value: 'ENTERTAIN', label: 'Entertainment' },
-  { value: 'EVENT_PLAN', label: 'Event Planning' },
-  { value: 'FINANCE', label: 'Finance & Banking' },
-  { value: 'GROCERY', label: 'Grocery' },
-  { value: 'GOVT', label: 'Government' },
-  { value: 'HOTEL', label: 'Hotel & Lodging' },
-  { value: 'HEALTH', label: 'Medical & Health' },
-  { value: 'NONPROFIT', label: 'Non-profit' },
-  { value: 'PROF_SERVICES', label: 'Professional Services' },
-  { value: 'TRAVEL', label: 'Travel & Transportation' },
-  { value: 'RESTAURANT', label: 'Restaurant' },
-  { value: 'OTHER', label: 'Other' },
-]
-
 // Fetches/updates the WhatsApp Business Profile Meta shows customers (photo,
 // about line, description, address, email, websites) — the same info
 // otherwise only editable from WhatsApp Manager. Self-contained so its own
 // loading/saving state doesn't churn the whole Settings page.
 const BusinessProfileCard = ({ account }) => {
-  const [profile, setProfile] = useState({ about: '', description: '', address: '', email: '', websites: ['', ''], vertical: 'UNDEFINED' })
+  const [description, setDescription] = useState('')
   const [photoUrl, setPhotoUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -49,14 +27,7 @@ const BusinessProfileCard = ({ account }) => {
     api.get(`/whatsapp/accounts/${account._id}/business-profile`)
       .then((res) => {
         const p = res.data.data.profile || {}
-        setProfile({
-          about: p.about || '',
-          description: p.description || '',
-          address: p.address || '',
-          email: p.email || '',
-          websites: [p.websites?.[0] || '', p.websites?.[1] || ''],
-          vertical: p.vertical || 'UNDEFINED',
-        })
+        setDescription(p.description || '')
         setPhotoUrl(p.profile_picture_url || null)
       })
       .catch(() => toast.error('Failed to load business profile'))
@@ -66,10 +37,7 @@ const BusinessProfileCard = ({ account }) => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await api.put(`/whatsapp/accounts/${account._id}/business-profile`, {
-        ...profile,
-        websites: profile.websites.filter((w) => w.trim()),
-      })
+      await api.put(`/whatsapp/accounts/${account._id}/business-profile`, { description })
       toast.success('Business profile updated')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update profile')
@@ -104,89 +72,49 @@ const BusinessProfileCard = ({ account }) => {
         <CardTitle>Business Profile</CardTitle>
         <p className="text-xs text-gray-400 mt-0.5">What customers see when they open a chat with {account.displayName}</p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         {loading ? (
-          <div className="h-40 bg-gray-100 rounded-xl skeleton" />
+          <div className="h-48 bg-gray-100 rounded-xl skeleton" />
         ) : (
-          <>
-            <div className="flex items-center gap-4">
-              <div className="relative w-16 h-16 rounded-2xl bg-green-50 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="flex flex-col items-center text-center py-2">
+            <label className="relative group cursor-pointer">
+              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shrink-0 border-4 border-white shadow-lg" style={{ background: 'linear-gradient(135deg,#7B2FBE20,#4A6CF720)' }}>
                 {photoUrl ? (
                   <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <Phone size={22} className="text-green-500" />
-                )}
-                {uploadingPhoto && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Loader2 size={18} className="text-white animate-spin" />
-                  </div>
+                  <Phone size={30} className="text-brand-purple" />
                 )}
               </div>
-              <div>
-                <label className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple cursor-pointer hover:underline">
-                  <Camera size={14} /> Change photo
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
-                </label>
-                <p className="text-xs text-gray-400 mt-0.5">JPG or PNG, square works best</p>
+              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                {uploadingPhoto ? (
+                  <Loader2 size={20} className="text-white animate-spin" />
+                ) : (
+                  <Camera size={20} className="text-white" />
+                )}
               </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-brand-purple text-white flex items-center justify-center shadow-md border-2 border-white">
+                <Camera size={13} />
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
+            </label>
+            <p className="text-xs text-gray-400 mt-3">Click the photo to change it — JPG or PNG, square works best</p>
+
+            <div className="w-full max-w-md mt-6 text-left">
+              <Textarea
+                label="Description"
+                placeholder="Tell customers what your business does — e.g. We help you find the best deals on electronics, delivered same day."
+                maxLength={512}
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <p className="text-xs text-gray-400 mt-1 text-right">{description.length}/512</p>
             </div>
 
-            <Input
-              label="About"
-              placeholder="Short status line, e.g. Available 9am-9pm"
-              maxLength={139}
-              value={profile.about}
-              onChange={(e) => setProfile({ ...profile, about: e.target.value })}
-            />
-            <Textarea
-              label="Description"
-              placeholder="Tell customers what your business does"
-              maxLength={512}
-              rows={3}
-              value={profile.description}
-              onChange={(e) => setProfile({ ...profile, description: e.target.value })}
-            />
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Input
-                label="Email"
-                type="email"
-                placeholder="support@yourbusiness.com"
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              />
-              <Select
-                label="Industry"
-                options={VERTICAL_OPTIONS}
-                value={profile.vertical}
-                onChange={(e) => setProfile({ ...profile, vertical: e.target.value })}
-              />
-            </div>
-            <Input
-              label="Address"
-              placeholder="Business address"
-              value={profile.address}
-              onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-            />
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Input
-                label="Website 1"
-                placeholder="https://yourbusiness.com"
-                value={profile.websites[0]}
-                onChange={(e) => setProfile({ ...profile, websites: [e.target.value, profile.websites[1]] })}
-              />
-              <Input
-                label="Website 2"
-                placeholder="https://yourbusiness.com/shop"
-                value={profile.websites[1]}
-                onChange={(e) => setProfile({ ...profile, websites: [profile.websites[0], e.target.value] })}
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button variant="gradient" leftIcon={<Save size={14} />} loading={saving} onClick={handleSave}>
-                Save Business Profile
-              </Button>
-            </div>
-          </>
+            <Button variant="gradient" leftIcon={<Save size={14} />} loading={saving} onClick={handleSave} className="mt-2">
+              Save Business Profile
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
