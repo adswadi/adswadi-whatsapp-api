@@ -82,7 +82,17 @@ io.on('connection', (socket) => {
 });
 
 // Security middleware
-app.use(helmet({ contentSecurityPolicy: false }));
+// Helmet's default Referrer-Policy is "no-referrer" — sends nothing at all
+// with any outgoing request, including the ones our own pages make when
+// embedding something (e.g. the onboarding page's YouTube iframe). YouTube
+// treats a referrer-less embed request as suspicious and refuses to play it
+// (its own "Error 153"). strict-origin-when-cross-origin still sends only
+// the origin (not the full URL) cross-origin — the same privacy-conscious
+// default modern browsers use when no policy is set at all.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
