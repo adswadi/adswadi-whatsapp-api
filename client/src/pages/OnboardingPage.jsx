@@ -330,7 +330,11 @@ const OnboardingPage = () => {
                 loading={loading}
                 rightIcon={step < 4 ? <ArrowRight size={16} /> : null}
               >
-                {step === 2 && !waData.displayName ? 'Skip for Now' : step === 3 ? 'Send Invites & Continue' : step === 4 ? 'Go to Dashboard' : 'Continue'}
+                {step === 2 && !waData.displayName ? 'Skip for Now'
+                  : step === 3 && teamEmails.every((e) => !e.trim()) ? 'Skip for Now'
+                  : step === 3 ? 'Send Invites & Continue'
+                  : step === 4 ? 'Go to Dashboard'
+                  : 'Continue'}
               </Button>
             </div>
           </div>
