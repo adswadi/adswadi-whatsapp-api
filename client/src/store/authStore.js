@@ -1,5 +1,18 @@
 import { create } from 'zustand'
 import api from '@/lib/api'
+import useSubscriptionStore from './subscriptionStore'
+
+// Runs right after login/session-restore so an expired trial blocks the
+// dashboard immediately — previously the renew popup only ever appeared
+// reactively, the first time the customer happened to try sending a
+// message, so simply opening the app after expiry showed nothing at all.
+const checkSubscriptionStatus = async () => {
+  try {
+    const res = await api.get('/billing/status')
+    const { active, message } = res.data.data
+    if (!active) useSubscriptionStore.getState().showExpiredModal(message)
+  } catch (_) {}
+}
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -20,6 +33,7 @@ const useAuthStore = create((set, get) => ({
       localStorage.setItem('refreshToken', refreshToken)
 
       set({ user, accessToken, refreshToken, isLoading: false })
+      checkSubscriptionStatus()
       return { success: true }
     } catch (err) {
       set({ isLoading: false })
@@ -52,6 +66,7 @@ const useAuthStore = create((set, get) => ({
       localStorage.setItem('refreshToken', refreshToken)
 
       set({ user, accessToken, refreshToken, isLoading: false, isInitialized: true })
+      checkSubscriptionStatus()
       return { success: true }
     } catch (err) {
       set({ isLoading: false })
@@ -69,6 +84,7 @@ const useAuthStore = create((set, get) => ({
       localStorage.setItem('refreshToken', refreshToken)
 
       set({ user, accessToken, refreshToken, isLoading: false, isInitialized: true })
+      checkSubscriptionStatus()
       return { success: true }
     } catch (err) {
       set({ isLoading: false })
@@ -98,6 +114,7 @@ const useAuthStore = create((set, get) => ({
     try {
       const response = await api.get('/auth/me')
       set({ user: response.data.data.user, isInitialized: true })
+      checkSubscriptionStatus()
     } catch (_) {
       localStorage.clear()
       set({ user: null, accessToken: null, refreshToken: null, isInitialized: true })

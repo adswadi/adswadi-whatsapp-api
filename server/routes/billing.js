@@ -9,6 +9,20 @@ const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/responseHelper');
 const { DEFAULT_PLANS } = require('../config/planLimits');
+const { getSubscriptionStatus } = require('../middleware/subscription');
+
+// GET /api/billing/status — checked right after login/app load so an
+// expired trial blocks the dashboard immediately, instead of only surfacing
+// the first time the customer happens to try sending a message.
+router.get('/status', authenticate, async (req, res) => {
+  try {
+    const status = await getSubscriptionStatus(req.user);
+    return success(res, status);
+  } catch (err) {
+    console.error('Subscription status error:', err);
+    return error(res, 'Failed to check subscription status', 500);
+  }
+});
 
 const getRazorpay = () => {
   return new Razorpay({
