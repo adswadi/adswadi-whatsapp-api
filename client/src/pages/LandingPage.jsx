@@ -220,7 +220,7 @@ const LogoMarquee = () => (
 
 // ── WhatsApp Phone UI previews ────────────────────
 const BroadcastUI = () => (
-  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden" style={{ width: 320 }}>
+  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-full max-w-[320px]">
     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
       <span className="text-xs font-bold text-gray-700">📤 Create Broadcast</span>
       <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">● Live</span>
@@ -269,7 +269,7 @@ const BroadcastUI = () => (
 )
 
 const ChatbotUI = () => (
-  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden" style={{ width: 320 }}>
+  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-full max-w-[320px]">
     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
       <span className="text-xs font-bold text-gray-700">🤖 Flow Builder</span>
       <span className="text-[10px] text-gray-400">No-code</span>
@@ -330,7 +330,7 @@ const ChatbotUI = () => (
 )
 
 const InboxUI = () => (
-  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden" style={{ width: 340 }}>
+  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-full max-w-[340px]">
     <div className="flex h-64">
       {/* sidebar */}
       <div className="w-40 border-r border-gray-100 flex flex-col">
@@ -395,7 +395,7 @@ const InboxUI = () => (
 )
 
 const AnalyticsUI = () => (
-  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden" style={{ width: 320 }}>
+  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-full max-w-[320px]">
     <div className="px-4 py-3 border-b border-gray-100">
       <p className="text-xs font-bold text-gray-700">📊 Campaign Analytics</p>
       <p className="text-[9px] text-gray-400">Diwali Sale 2024 — Last 7 days</p>
