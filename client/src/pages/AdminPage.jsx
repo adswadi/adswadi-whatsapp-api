@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -16,6 +17,12 @@ const STATUS_BADGE = {
   expired: { variant: 'red', label: 'Expired' },
 }
 
+const RENEW_PLAN_OPTIONS = [
+  { value: 'starter', label: 'Starter — ₹999' },
+  { value: 'growth', label: 'Growth — ₹2,999' },
+  { value: 'enterprise', label: 'Enterprise — ₹9,999' },
+]
+
 const AdminPage = () => {
   const { user } = useAuthStore()
   const [users, setUsers] = useState([])
@@ -24,6 +31,7 @@ const AdminPage = () => {
   const [renewingId, setRenewingId] = useState(null)
   const [search, setSearch] = useState('')
   const [truncated, setTruncated] = useState(false)
+  const [renewPlan, setRenewPlan] = useState({}) // userId -> plan picked for their next renewal
 
   // Searching server-side rather than filtering the loaded page — the API
   // returns the newest 100 organizations, so a client-side filter would only
@@ -51,11 +59,17 @@ const AdminPage = () => {
     return <Navigate to="/dashboard" replace />
   }
 
+  // Defaults each row to whatever plan the customer is already on (once
+  // they've paid at least once) so re-renewing doesn't quietly downgrade a
+  // Growth/Enterprise customer to Starter just because that's the default.
+  const getRenewPlan = (u) => renewPlan[u._id] || (u.plan && u.plan !== 'free' ? u.plan : 'starter')
+
   const renew = async (id) => {
+    const planName = getRenewPlan(users.find((u) => u._id === id))
     setRenewingId(id)
     try {
-      await api.post(`/admin/users/${id}/renew`)
-      toast.success('Renewed for 30 days')
+      const res = await api.post(`/admin/users/${id}/renew`, { planName })
+      toast.success(res.data.message || 'Renewed')
       fetchUsers()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to renew')
@@ -144,6 +158,12 @@ const AdminPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant={badge.variant} dot>{badge.label}</Badge>
+                      <Select
+                        options={RENEW_PLAN_OPTIONS}
+                        value={getRenewPlan(u)}
+                        onChange={(e) => setRenewPlan({ ...renewPlan, [u._id]: e.target.value })}
+                        className="w-40 py-1.5 text-xs"
+                      />
                       <Button
                         variant="gradient"
                         size="sm"
