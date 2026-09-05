@@ -142,11 +142,6 @@ router.post('/login', async (req, res) => {
 
     if (!user.isActive) return error(res, 'Account deactivated', 403);
 
-    // Accounts created before the trial system existed have no trialEndsAt —
-    // give them a one-time grace window instead of locking them out immediately.
-    if (!user.trialEndsAt && !user.organizationId) {
-      user.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    }
     const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS || 'adswadiofficial@gmail.com').split(',').map((e) => e.trim().toLowerCase());
     if (!user.isPlatformAdmin && adminEmails.includes(user.email.toLowerCase())) {
       user.isPlatformAdmin = true;
